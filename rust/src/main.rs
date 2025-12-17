@@ -4,13 +4,6 @@ use log::LevelFilter;
 use rust::trace::pool_finder;
 
 pub fn setup_logger() -> Result<()> {
-    let log_path = std::path::Path::new("root/dex-arb-engine/rust/logs/pools.log");
-    let file = std::fs::OpenOptions::new()
-        .write(true)
-        .append(true)
-        .create(true)
-        .open(log_path)?;
-
     let colors = ColoredLevelConfig {
         trace: Color::Cyan,
         debug: Color::Magenta,
@@ -30,7 +23,7 @@ pub fn setup_logger() -> Result<()> {
             ))
         })
         .chain(std::io::stdout())
-        .chain(file)
+        .chain(fern::log_file("pools.log")?)
         .level(LevelFilter::Error)
         .level_for("rust", LevelFilter::Info)
         .apply()?;
@@ -40,6 +33,7 @@ pub fn setup_logger() -> Result<()> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    dotenv::dotenv().ok();
     setup_logger()?;
     
     let uniswap_v3_factory = String::from("0x1F98431c8aD98523631AE4a59f267346ea31F984");
