@@ -1,6 +1,7 @@
 use anyhow::{Ok, Result};
 use fern::colors::{Color, ColoredLevelConfig};
 use log::LevelFilter;
+use rust::trace::pool_finder;
 
 pub fn setup_logger() -> Result<()> {
     let log_path = std::path::Path::new("root/dex-arb-engine/rust/logs/pools.log");
@@ -37,8 +38,12 @@ pub fn setup_logger() -> Result<()> {
     Ok(())
 }
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     setup_logger()?;
+    
+    let uniswap_v3_factory = String::from("0x1F98431c8aD98523631AE4a59f267346ea31F984");
+    pool_finder(411676800, uniswap_v3_factory).await?;
 
     Ok(())
 }
