@@ -1,7 +1,7 @@
 use anyhow::{Ok, Result};
 use fern::colors::{Color, ColoredLevelConfig};
 use log::LevelFilter;
-use rust::trace::pool_finder;
+use rust::trace::{pool_finder, get_tokens};
 
 pub fn setup_logger() -> Result<()> {
     let colors = ColoredLevelConfig {
@@ -36,8 +36,9 @@ async fn main() -> Result<()> {
     dotenv::dotenv().ok();
     setup_logger()?;
     
-    let uniswap_v3_factory = String::from("0x1F98431c8aD98523631AE4a59f267346ea31F984");
-    pool_finder(411676800, uniswap_v3_factory).await?;
+    get_tokens().await?;
+    //let uniswap_v3_factory = String::from("0x1F98431c8aD98523631AE4a59f267346ea31F984");
+    //pool_finder(411676800, uniswap_v3_factory).await?;
 
     Ok(())
 }
