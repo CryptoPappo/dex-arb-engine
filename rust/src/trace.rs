@@ -70,7 +70,7 @@ pub async fn get_tokens() -> Result<()> {
     let client = Client::new();
     let url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/map";
     let api_key = std::env::var("COINMARKET_API").unwrap();
-    let params = [("start",  "1"), ("limit", "10"), ("aux", "platform")];
+    let params = [("start",  "1"), ("limit", "100"), ("aux", "platform")];
     
     let response = client.get(url)
         .header("Accepts", "application/json")
@@ -82,7 +82,13 @@ pub async fn get_tokens() -> Result<()> {
     println!("Status: {}", response.status());
     //let body = response.text().await?;
     let body = response.json::<ApiResponse>().await?;
-    println!("{:#?}", body);
+    //println!("{:#?}", body);
+    
+    for data in body.data {
+        if data.platform.is_some() {
+            println!("{:#?}", data.platform);
+        }
+    }
 
     Ok(())
 }
