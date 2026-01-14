@@ -50,7 +50,7 @@ class Dex(Base):
     name: Mapped[str] = mapped_column(String(20)) 
     dex_type: Mapped[Optional[str]]
     factory_address: Mapped[Optional[str]]
-    router_address: Mapped[Optional[str]]
+    quoter_address: Mapped[Optional[str]]
 
     chains: Mapped[List[Chains]] = relationship(back_populates="dex")
     pools: Mapped["Pools"] = relationship(back_populates="dex")
