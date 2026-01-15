@@ -1,6 +1,6 @@
-from db.connection import create_connection
-from db.models import Chains
 from sqlalchemy.orm import sessionmaker
+from connection import create_connection
+from models import Chains, Dex
 
 def populate_chains():
     engine = create_connection()

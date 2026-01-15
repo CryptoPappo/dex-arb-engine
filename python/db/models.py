@@ -1,5 +1,5 @@
-from typing import List
-from sqlachemy import ForeignKey, String
+from typing import List, Optional
+from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import (
         DeclarativeBase,
         Mapped,
@@ -7,7 +7,7 @@ from sqlalchemy.orm import (
         relationship
 )
 
-class Base(DelcarativeBase):
+class Base(DeclarativeBase):
     pass
 
 class Chains(Base):
