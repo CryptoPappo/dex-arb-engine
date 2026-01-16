@@ -1,25 +1,18 @@
-from sqlalchemy.orm import sessionmaker
-from connection import create_connection
-from models import Chains, Dex
+from sqlalchemy.orm import Session
+from db.models import Chains, Dex
 
-def populate_chains():
-    engine = create_connection()
-    Session = sessionmaker(engine)
-    
+def populate_chains(session: Session):
     chains = [
             Chains(chain_id=1, name="Ethereum", native_token="ETH", evm_compatible=True),
             Chains(chain_id=42161, name="Arbitrum", native_token="ETH", evm_compatible=True),
-            Chain(chain_id=56, name="Bsc", native_token="BNB", evm_compatible=True)
+            Chains(chain_id=56, name="Bsc", native_token="BNB", evm_compatible=True)
     ]
 
-    with Session() as session:
+    with session() as session:
         session.add_all(chains)
         session.commit()
 
-def populate_dex():
-    engine = create_connection()
-    Session = sessionmaker(engine)
-    
+def populate_dex(session: Session):
     dexs = [
             Dex(chain_id=1, name="Uniswap", dex_type="V2", 
                 factory_address="0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
@@ -50,6 +43,6 @@ def populate_dex():
                 quoter_address="0x9f75dd27d6664c475b90e105573e550ff69437b0")
     ]
 
-    with Session() as session:
+    with session() as session:
         session.add_all(dexs)
         session.commit()
