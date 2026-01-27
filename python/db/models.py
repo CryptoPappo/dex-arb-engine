@@ -28,7 +28,7 @@ class Chains(Base):
 class Tokens(Base):
     __tablename__ = "tokens"
 
-    cmc_id: Mapped[int] = mapped_column(primary_key=True)
+    coin_id: Mapped[int] = mapped_column(primary_key=True)
     chain_id: Mapped[int] = mapped_column(ForeignKey("chains.chain_id"), primary_key=True)
     name: Mapped[str] = mapped_column(String(20))
     symbol: Mapped[str] = mapped_column(String(6))
@@ -46,7 +46,7 @@ class Tokens(Base):
     )
     
     def __repr__(self) -> str:
-        return f"Token(id={self.cmc_id}, chain_id={self.chain_id}, symbol={self.symbol},\
+        return f"Token(id={self.coin_id}, chain_id={self.chain_id}, symbol={self.symbol},\
 address={self.token_address})"
        
 class Dex(Base):
@@ -70,8 +70,8 @@ class Pools(Base):
     chain_id: Mapped[int] = mapped_column(ForeignKey("chains.chain_id"), primary_key=True)
     dex_id: Mapped[int] = mapped_column(ForeignKey("dex.dex_id"), primary_key=True)
     pool_address: Mapped[str] = mapped_column(String(45))
-    token0: Mapped[str] = mapped_column(ForeignKey("tokens.cmc_id"), primary_key=True)
-    token1: Mapped[str] = mapped_column(ForeignKey("tokens.cmc_id"), primary_key=True)
+    token0: Mapped[str] = mapped_column(ForeignKey("tokens.coin_id"), primary_key=True)
+    token1: Mapped[str] = mapped_column(ForeignKey("tokens.coin_id"), primary_key=True)
     fee: Mapped[int] = mapped_column(primary_key=True)
     tick_spacing: Mapped[Optional[int]]
     active: Mapped[Optional[bool]]

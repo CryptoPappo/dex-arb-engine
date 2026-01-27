@@ -1,5 +1,9 @@
+import requests
+import os
+from dotenv import load_dotenv
+from sqlalchemy import select
 from sqlalchemy.orm import Session
-from db.models import Chains, Dex
+from db.models import Chains, Dex, Tokens
 
 def populate_chains(session: Session):
     chains = [
@@ -45,4 +49,47 @@ def populate_dex(session: Session):
 
     with session() as session:
         session.add_all(dexs)
+        session.commit()
+
+def populate_tokens(session: Session):
+    chain_ids = []
+    with session() as session:
+        rows = session.execute(select(Chains)).all()
+        print(len(rows))
+        for row in rows:
+            chain_ids.append(row.chain_id)
+
+    load_dotenv()
+    coingecko_api = os.getenv("COINGECKO_API")
+
+    platform_ids = []
+    url = f"https://api.coingecko.com/api/v3/asset_platforms?x_cg_demo_api_key={coingecko_api}"
+    response = requests.get(url)
+    response.raise_for_status()
+    chains = response.json()
+    for chain in chains:
+        if chain["chain_identifier"] in chain_ids:
+            platform_ids.append(chain["id"])
+
+    tokens_data = []
+    for platform_id in platform_ids:
+        url = f"https://api.coingecko.com/api/v3/token_lists/{platform_id}/all.json?x_cg_demo_api_key={coingecko_api}"
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        tokens_data.extend(data["tokens"])
+
+    tokens = [
+        Tokens(
+            chain_id=token["chainId"],
+            name=token["name"], 
+            symbol=token["symbol"], 
+            token_address=token["address"],
+            decimals=token["decimals"]
+          )
+        for token in tokens_data
+    ]
+
+    with session() as session:
+        session.add_all(tokens)
         session.commit()
