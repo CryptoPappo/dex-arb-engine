@@ -29,7 +29,7 @@ class Tokens(Base):
     __tablename__ = "tokens"
 
     coin_id: Mapped[int] = mapped_column(primary_key=True)
-    chain_id: Mapped[int] = mapped_column(ForeignKey("chains.chain_id"), primary_key=True)
+    chain_id: Mapped[int] = mapped_column(ForeignKey("chains.chain_id"))
     name: Mapped[str] = mapped_column(String(20))
     symbol: Mapped[str] = mapped_column(String(6))
     token_address: Mapped[str] = mapped_column(String(45))

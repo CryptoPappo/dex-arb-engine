@@ -53,9 +53,8 @@ def populate_dex(session: Session):
 
 def populate_tokens(session: Session):
     chain_ids = []
-    with session() as session:
-        rows = session.execute(select(Chains)).all()
-        print(len(rows))
+    with session() as session_:
+        rows = session_.scalars(select(Chains)).all()
         for row in rows:
             chain_ids.append(row.chain_id)
 

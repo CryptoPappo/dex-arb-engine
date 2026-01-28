@@ -1,6 +1,8 @@
 import pytest
 import os
 import sys
+import responses
+from dotenv import load_dotenv
 from sqlalchemy import inspect, select
 from sqlalchemy.orm import sessionmaker
 
@@ -53,7 +55,65 @@ def test_populate_dex():
         assert dex.factory_address == "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"
         assert dex.quoter_address == "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
 
+@responses.activate
 def test_populate_tokens():
+    load_dotenv()
+    coingecko_api = os.getenv("COINGECKO_API")
+    url_chains = f"https://api.coingecko.com/api/v3/asset_platforms?x_cg_demo_api_key={coingecko_api}"
+    mock_data_chains = [
+            {
+                "id": "ethereum",
+                "chain_identifier": 1,
+                "name": "Ethereum",
+                "shortname": "",
+                "native_coin_id": "ethereum",
+                "image": {
+                    "thumb": "",
+                    "small": "",
+                    "large": ""
+                }
+            }
+    ]
+    responses.add(
+            responses.GET,
+            url_chains,
+            json=mock_data_chains,
+            status=200
+    )
+
+    url_tokens = f"https://api.coingecko.com/api/v3/token_lists/ethereum/all.json?x_cg_demo_api_key={coingecko_api}"
+    mock_data_tokens = {
+        "name": "CoinGecko",
+        "logoURI": "", 
+        "keywords": ["defi"],
+        "timestamp": "",
+        "tokens": [
+            {
+                "chainId": 1,
+                "address": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+                "name": "Wrapped Bitcoin",
+                "symbol": "WBTC",
+                "decimals": 8,
+                "logoURI": ""
+            },
+            {
+                "chainId": 1,
+                "address": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", 
+                "name": "Wrapped Ethereum",
+                "symbol": "WETH",
+                "decimals": 18,
+                "logoURI": ""
+            }
+        ]
+    }
+    
+    responses.add(
+            responses.GET,
+            url_tokens,
+            json=mock_data_tokens,
+            status=200
+    )
+
     engine = create_connection("sqlite:///:memory:")
     Base.metadata.create_all(engine)
 
@@ -62,7 +122,7 @@ def test_populate_tokens():
     populate_tokens(Session) 
     
     with Session() as session:
-        rows = session.execute(select(Tokens)).all()
+        rows = session.scalars(select(Tokens)).all()
         assert len(rows) != 0
         
         wbtc = session.scalars(
@@ -71,5 +131,4 @@ def test_populate_tokens():
                 .where(Tokens.symbol == "WBTC")
                 ).first()
         assert wbtc.token_address == "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
-        assert wbtc.decimals == 18
-
+        assert wbtc.decimals == 8
