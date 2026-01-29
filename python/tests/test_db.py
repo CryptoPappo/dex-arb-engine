@@ -130,5 +130,5 @@ def test_populate_tokens():
                 .where(Tokens.chain_id == 1)
                 .where(Tokens.symbol == "WBTC")
                 ).first()
-        assert wbtc.token_address == "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
+        assert wbtc.address == "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
         assert wbtc.decimals == 8

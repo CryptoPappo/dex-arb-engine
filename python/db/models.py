@@ -32,7 +32,7 @@ class Tokens(Base):
     chain_id: Mapped[int] = mapped_column(ForeignKey("chains.chain_id"))
     name: Mapped[str] = mapped_column(String(20))
     symbol: Mapped[str] = mapped_column(String(6))
-    token_address: Mapped[str] = mapped_column(String(45))
+    address: Mapped[str] = mapped_column(String(45))
     decimals: Mapped[int]
     
     chains: Mapped[Chains] = relationship(back_populates="tokens")

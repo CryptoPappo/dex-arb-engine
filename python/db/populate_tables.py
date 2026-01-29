@@ -58,6 +58,9 @@ def populate_tokens(session: Session):
         for row in rows:
             chain_ids.append(row.chain_id)
 
+    if len(chain_ids) == 0:
+        raise Exception("First populate the chains table")
+
     load_dotenv()
     coingecko_api = os.getenv("COINGECKO_API")
 
@@ -83,7 +86,7 @@ def populate_tokens(session: Session):
             chain_id=token["chainId"],
             name=token["name"], 
             symbol=token["symbol"], 
-            token_address=token["address"],
+            address=token["address"],
             decimals=token["decimals"]
           )
         for token in tokens_data
@@ -92,3 +95,6 @@ def populate_tokens(session: Session):
     with session() as session:
         session.add_all(tokens)
         session.commit()
+
+def populate_pools(session: Session):
+
