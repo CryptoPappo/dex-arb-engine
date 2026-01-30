@@ -2,21 +2,21 @@ import requests
 import os
 from dotenv import load_dotenv
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm.session import sessionmaker
 from db.models import Chains, Dex, Tokens
 
-def populate_chains(session: Session):
+def populate_chains(Session: sessionmaker):
     chains = [
             Chains(chain_id=1, name="Ethereum", native_token="ETH", evm_compatible=True),
             Chains(chain_id=42161, name="Arbitrum", native_token="ETH", evm_compatible=True),
             Chains(chain_id=56, name="Bsc", native_token="BNB", evm_compatible=True)
     ]
 
-    with session() as session:
+    with Session() as session:
         session.add_all(chains)
         session.commit()
 
-def populate_dex(session: Session):
+def populate_dex(Session: sessionmaker):
     dexs = [
             Dex(chain_id=1, name="Uniswap", dex_type="V2", 
                 factory_address="0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
@@ -47,14 +47,14 @@ def populate_dex(session: Session):
                 quoter_address="0x9f75dd27d6664c475b90e105573e550ff69437b0")
     ]
 
-    with session() as session:
+    with Session() as session:
         session.add_all(dexs)
         session.commit()
 
-def populate_tokens(session: Session):
+def populate_tokens(Session: sessionmaker):
     chain_ids = []
-    with session() as session_:
-        rows = session_.scalars(select(Chains)).all()
+    with Session() as session:
+        rows = session.scalars(select(Chains)).all()
         for row in rows:
             chain_ids.append(row.chain_id)
 
@@ -92,9 +92,7 @@ def populate_tokens(session: Session):
         for token in tokens_data
     ]
 
-    with session() as session:
+    with Session() as session:
         session.add_all(tokens)
         session.commit()
-
-def populate_pools(session: Session):
 

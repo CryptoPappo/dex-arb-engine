@@ -1,6 +1,7 @@
 from typing import Optional, Iterator, Tuple, Any
 from abc import ABC, abstractmethod
 from web3 import Web3
+from web3.contract.contract import Contract
 from eth_abi import abi
 from models import Tokens, Pools
 
@@ -40,7 +41,7 @@ def token_pair_fee_iter(
                 tokens1 = tokens[i]
 
             if fees is None:
-                yield tokens0, tokens1
+                yield tokens0, tokens1, None
             else:
                 for fee in fees:
                     yield tokens0, tokens1, fee
@@ -60,38 +61,25 @@ class UniswapV2Adapter(DexAdapter):
     def __init__(
             self,
             web3: Web3,
-            factory_address: str, 
-            multicall_address: str,
+            factory_contract: Contract, 
+            multicall_contract: Contract,
             tokens: list[Tokens],
             chain_id: int,
             dex_id: int
     ):   
-        with open("abi/uniswap_v2_abi.json") as f:
-            abi_json = json.load(f)
-            abi_factory = abi_json["abi"]
-        self.factory_contract = web3.eth.contract(
-                address=factory_address,
-                abi=abi_factory
-        )
-        self.abi_factory = abi_factory
-        with open("abi/multicall_abi.json") as f:
-            abi_json = json.load(f)
-            abi_multicall = abi_json["abi"]
-        self.multicall_contract = web3.eth.contract(
-                address=multicall_address,
-                abi=abi_multicall
-        )
+        self.factory_contract = factory_contract
+        self.multicall_contract = multicall_contract
         self.tokens = tokens
         self.chain_id = chain_id
         self.dex_id = dex_id
 
-    def _pool_combinations(self) ->  Iterator[Tuple[Tokens, Tokens]]:
+    def _pool_combinations(self) ->  Iterator[Tuple[Tokens, Tokens, int | None]]:
         yield from token_pair_fee_iter(self.tokens)
 
     def fetch_pools(self) -> list[Pools]:
         calls = []
         pools = []
-        for token0, token1 in self._pool_combinations():
+        for token0, token1, _ in self._pool_combinations():
             calls.append(
                 (
                     self.factory_contract.address,
@@ -113,11 +101,11 @@ class UniswapV2Adapter(DexAdapter):
             )
         data_encoded = self.multicall_contract.functions.aggregate3(calls).call()
         
-        for data, index in enumerate(data_encoded):
+        for index, data in enumerate(data_encoded):
             pool_data = decode_data(
                     ["getPair"],
                     [data[1]],
-                    self.abi_factory
+                    self.factory_contract.abi
             )
             pool_address = pool_data[0][0]
 
