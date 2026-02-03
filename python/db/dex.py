@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from web3 import Web3
 from web3.contract.contract import Contract
 from eth_abi import abi
-from models import Tokens, Pools
+from db.models import Tokens, Pools
 
 ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 
@@ -33,8 +33,8 @@ def token_pair_fee_iter(
 ) -> Iterator[Tuple[Tokens, Tokens, int | None]]:
     for i in range(len(tokens)):
         for j in range(i + 1, len(tokens)):
-            if int(tokens[i].address, 16) < int(tokens[j].address):
-                token0 = tokens[i]
+            if int(tokens[i].address, 16) < int(tokens[j].address, 16):
+                tokens0 = tokens[i]
                 tokens1 = tokens[j]
             else:
                 tokens0 = tokens[j]
@@ -60,7 +60,6 @@ class UniswapV2Adapter(DexAdapter):
 
     def __init__(
             self,
-            web3: Web3,
             factory_contract: Contract, 
             multicall_contract: Contract,
             tokens: list[Tokens],
@@ -78,7 +77,7 @@ class UniswapV2Adapter(DexAdapter):
 
     def fetch_pools(self) -> list[Pools]:
         calls = []
-        pools = []
+        possible_pools = []
         for token0, token1, _ in self._pool_combinations():
             calls.append(
                 (
@@ -89,7 +88,7 @@ class UniswapV2Adapter(DexAdapter):
                     ._encode_transaction_data(),
                 )
             )
-            pools.append(
+            possible_pools.append(
                     Pools(
                         chain_id = self.chain_id,
                         dex_id = self.dex_id,
@@ -101,17 +100,17 @@ class UniswapV2Adapter(DexAdapter):
             )
         data_encoded = self.multicall_contract.functions.aggregate3(calls).call()
         
+        pools = []
         for index, data in enumerate(data_encoded):
             pool_data = decode_data(
                     ["getPair"],
                     [data[1]],
-                    self.factory_contract.abi
+                    [self.factory_contract.abi]
             )
-            pool_address = pool_data[0][0]
+            pool_address = Web3.to_checksum_address(pool_data[0][0])
 
             if pool_address != ZERO_ADDRESS:
-                pools[index].pool_address = pool_address
-            else:
-                _ = pools.pop(index)
+                possible_pools[index].pool_address = pool_address
+                pools.append(possible_pools[index])
 
         return pools
