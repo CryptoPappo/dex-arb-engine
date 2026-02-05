@@ -5,6 +5,8 @@ from sqlalchemy import select
 from sqlalchemy.orm.session import sessionmaker
 
 from db.models import Chains, Dex, Tokens
+from db.utils.logging import get_logger 
+logger = get_logger("populate_tables")
 
 def populate_chains(Session: sessionmaker):
     chains = [
@@ -16,7 +18,9 @@ def populate_chains(Session: sessionmaker):
     with Session() as session:
         session.add_all(chains)
         session.commit()
-
+    
+    logger.info(f"Inserted {len(chains)} chains")
+    
 def populate_dex(Session: sessionmaker):
     dexs = [
             Dex(chain_id=1, name="Uniswap", dex_type="V2", 
@@ -51,6 +55,8 @@ def populate_dex(Session: sessionmaker):
     with Session() as session:
         session.add_all(dexs)
         session.commit()
+    
+    logger.info(f"Inserted {len(dexs)} dexs")
 
 def populate_tokens(Session: sessionmaker):
     chain_ids = []
@@ -64,6 +70,8 @@ def populate_tokens(Session: sessionmaker):
 
     load_dotenv()
     coingecko_api = os.getenv("COINGECKO_API")
+    if coingecko_api is None:
+        raise Exception("Coingeck API missing in env file.")
 
     platform_ids = []
     url = f"https://api.coingecko.com/api/v3/asset_platforms?x_cg_demo_api_key={coingecko_api}"
@@ -96,4 +104,9 @@ def populate_tokens(Session: sessionmaker):
     with Session() as session:
         session.add_all(tokens)
         session.commit()
+
+    logger.info(f"Inserted {len(tokens)} tokens")
+
+#def populate_pools(Session: sessionmaker):
+    
 

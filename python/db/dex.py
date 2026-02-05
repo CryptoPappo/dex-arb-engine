@@ -101,8 +101,8 @@ class UniswapV2Adapter(DexAdapter):
                         chain_id=self.chain_id,
                         dex_id=self.dex_id,
                         pool_address="",
-                        token0=token0.address,
-                        token1=token1.address,
+                        token0=token0.coin_id,
+                        token1=token1.coin_id,
                         fee=fee,
                     )
             )
@@ -160,8 +160,8 @@ class UniswapV3Adapter(DexAdapter):
                         chain_id=self.chain_id,
                         dex_id=self.dex_id,
                         pool_address="",
-                        token0=token0.address,
-                        token1=token1.address,
+                        token0=token0.coin_id,
+                        token1=token1.coin_id,
                         fee=fee,
                         tick_spacing=TICK_SPACING[fee],
                     )
@@ -227,8 +227,8 @@ class UniswapV4Adapter(DexAdapter):
                         chain_id=self.chain_id,
                         dex_id=self.dex_id,
                         pool_address=pool_id,
-                        token0=token0.address,
-                        token1=token1.address,
+                        token0=token0.coin_id,
+                        token1=token1.coin_id,
                         fee=fee,
                         tick_spacing=tick_spacing,
                     )
