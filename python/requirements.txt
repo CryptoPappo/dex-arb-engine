@@ -1,2 +1,4 @@
 requests
 SQLAlchemy
+web3
+python-dotenv
