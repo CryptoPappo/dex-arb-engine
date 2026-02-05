@@ -3,7 +3,7 @@ import os
 import sys
 import responses
 from dotenv import load_dotenv
-from sqlalchemy import inspect, select
+from sqlalchemy import create_engine, inspect, select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError
 
@@ -11,12 +11,11 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
 sys.path.append(parent_dir)
 
-from db.connection import create_connection
 from db.models import Base, Chains, Dex, Tokens
 from db.populate_tables import populate_chains, populate_dex, populate_tokens
 
 def test_tables_created():
-    engine = create_connection("sqlite:///:memory:")
+    engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
 
     inspector = inspect(engine)
@@ -28,7 +27,7 @@ def test_tables_created():
     assert "pools" in tables
 
 def test_populate_chains():
-    engine = create_connection("sqlite:///:memory:")
+    engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
 
     Session = sessionmaker(bind=engine)
@@ -42,7 +41,7 @@ def test_populate_chains():
         assert eth.evm_compatible == True
 
 def test_populate_dex():
-    engine = create_connection("sqlite:///:memory:")
+    engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
 
     Session = sessionmaker(bind=engine)
@@ -57,7 +56,7 @@ def test_populate_dex():
         assert dex.quoter_address == "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
 
 def test_duplicates():
-    engine = create_connection("sqlite:///:memory:")
+    engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
 
     Session = sessionmaker(bind=engine) 
@@ -132,7 +131,7 @@ def test_populate_tokens():
             status=200
     )
 
-    engine = create_connection("sqlite:///:memory:")
+    engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
 
     Session = sessionmaker(bind=engine)

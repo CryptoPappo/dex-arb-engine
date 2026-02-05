@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 from sqlalchemy import select
 from sqlalchemy.orm.session import sessionmaker
+
 from db.models import Chains, Dex, Tokens
 
 def populate_chains(Session: sessionmaker):
