@@ -5,6 +5,7 @@ import responses
 from dotenv import load_dotenv
 from sqlalchemy import inspect, select
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import IntegrityError
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
@@ -54,6 +55,23 @@ def test_populate_dex():
         assert dex.dex_type == "V2"
         assert dex.factory_address == "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"
         assert dex.quoter_address == "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
+
+def test_duplicates():
+    engine = create_connection("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+
+    Session = sessionmaker(bind=engine) 
+    populate_chains(Session)
+    populate_dex(Session)
+
+    with pytest.raises(IntegrityError) as excinfo_chains:
+        populate_chains(Session)
+    
+    with pytest.raises(IntegrityError) as excinfo_dex:
+        populate_dex(Session)
+    
+    assert excinfo_chains.type is IntegrityError
+    assert excinfo_dex.type is IntegrityError
 
 @responses.activate
 def test_populate_tokens():

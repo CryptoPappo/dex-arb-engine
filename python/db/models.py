@@ -1,10 +1,14 @@
 from typing import List, Optional
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import (
+        ForeignKey,
+        String,
+        UniqueConstraint,
+)
 from sqlalchemy.orm import (
         DeclarativeBase,
         Mapped,
         mapped_column,
-        relationship
+        relationship,
 )
 
 class Base(DeclarativeBase):
@@ -35,6 +39,10 @@ class Tokens(Base):
     address: Mapped[str] = mapped_column(String(45))
     decimals: Mapped[int]
     
+    __table_args__ = (
+            UniqueConstraint("address", "chain_id", name="uq_tokens_address_chain"),
+    )
+
     chains: Mapped[Chains] = relationship(back_populates="tokens")
     pools_as_token0: Mapped[List["Pools"]] = relationship(
             foreign_keys="Pools.token0", 
@@ -55,9 +63,13 @@ class Dex(Base):
     dex_id: Mapped[int] = mapped_column(primary_key=True)
     chain_id: Mapped[int] = mapped_column(ForeignKey("chains.chain_id"))
     name: Mapped[str] = mapped_column(String(20)) 
-    dex_type: Mapped[Optional[str]]
-    factory_address: Mapped[Optional[str]]
+    dex_type: Mapped[str] = mapped_column(String(5))
+    factory_address: Mapped[str] = mapped_column(String(45))
     quoter_address: Mapped[Optional[str]]
+    
+    __table_args__ = (
+            UniqueConstraint("factory_address", "chain_id", name="uq_dex_address_chain"),
+    )
 
     chains: Mapped[Chains] = relationship(back_populates="dex")
     pools: Mapped[List["Pools"]] = relationship(back_populates="dex")
@@ -72,20 +84,14 @@ class Pools(Base):
             ForeignKey("chains.chain_id"),
             primary_key=True
     )
-    dex_id: Mapped[int] = mapped_column(
-            ForeignKey("dex.dex_id"),
-            primary_key=True
+    pool_address: Mapped[str] = mapped_column(
+            String(45),
+            primart_key=True
     )
-    pool_address: Mapped[str] = mapped_column(String(45))
-    token0: Mapped[str] = mapped_column(
-            ForeignKey("tokens.coin_id"),
-            primary_key=True
-    )
-    token1: Mapped[str] = mapped_column(
-            ForeignKey("tokens.coin_id"),
-            primary_key=True
-    )
-    fee: Mapped[int] = mapped_column(primary_key=True)
+    dex_id: Mapped[int] = mapped_column(ForeignKey("dex.dex_id"))
+    token0: Mapped[str] = mapped_column(ForeignKey("tokens.coin_id"))
+    token1: Mapped[str] = mapped_column(ForeignKey("tokens.coin_id"))
+    fee: Mapped[int] 
     tick_spacing: Mapped[Optional[int]]
     active: Mapped[Optional[bool]]
 
