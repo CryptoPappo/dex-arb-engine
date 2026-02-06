@@ -20,7 +20,7 @@ class Chains(Base):
     chain_id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(20))
     native_token: Mapped[str] = mapped_column(String(6))
-    evm_compatible: Mapped[bool]
+    evm: Mapped[bool]
     
     tokens: Mapped[List["Tokens"]] = relationship(back_populates="chains")
     dex: Mapped[List["Dex"]] = relationship(back_populates="chains")

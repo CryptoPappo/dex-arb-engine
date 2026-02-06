@@ -1,18 +1,25 @@
 import requests
-import os
-from dotenv import load_dotenv
+from web3 import Web3
 from sqlalchemy import select
 from sqlalchemy.orm.session import sessionmaker
 
 from db.models import Chains, Dex, Tokens
+from db.dex import build_adapter
 from db.utils.logging import get_logger 
+from db.utils.tools import require_env
+from db.utils.abi import require_abi
+from db.config import CHAINS, DEXS, MULTICALL_ADDRESS
 logger = get_logger("populate_tables")
 
 def populate_chains(Session: sessionmaker):
     chains = [
-            Chains(chain_id=1, name="Ethereum", native_token="ETH", evm_compatible=True),
-            Chains(chain_id=42161, name="Arbitrum", native_token="ETH", evm_compatible=True),
-            Chains(chain_id=56, name="Bsc", native_token="BNB", evm_compatible=True)
+            Chains(
+                chain_id=chain.chain_id,
+                name=chain.name,
+                native_token=chain.native_token,
+                evm=chain.evm,
+            )
+            for chain in CHAINS.values()
     ]
 
     with Session() as session:
@@ -23,33 +30,15 @@ def populate_chains(Session: sessionmaker):
     
 def populate_dex(Session: sessionmaker):
     dexs = [
-            Dex(chain_id=1, name="Uniswap", dex_type="V2", 
-                factory_address="0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
-                quoter_address="0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"),
-            Dex(chain_id=42161, name="Uniswap", dex_type="V2",
-                factory_address="0xf1D7CC64Fb4452F05c498126312eBE29f30Fbcf9",
-                quoter_address="0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24"),
-            Dex(chain_id=56, name="Uniswap", dex_type="V2",
-                factory_address="0x8909Dc15e40173Ff4699343b6eB8132c65e18eC6",
-                quoter_address="0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24"),
-            Dex(chain_id=1, name="Uniswap", dex_type="V3",
-                factory_address="0x1F98431c8aD98523631AE4a59f267346ea31F984",
-                quoter_address="0x61fFE014bA17989E743c5F6cB21bF9697530B21e"),
-            Dex(chain_id=42161, name="Uniswap", dex_type="V3",
-                factory_address="0x1F98431c8aD98523631AE4a59f267346ea31F984",
-                quoter_address="0x61fFE014bA17989E743c5F6cB21bF9697530B21e"),
-            Dex(chain_id=56, name="Uniswap", dex_type="V3",
-                factory_address="0xdB1d10011AD0Ff90774D0C6Bb92e5C5c8b4461F7",
-                quoter_address="0x78D78E420Da98ad378D7799bE8f4AF69033EB077"),
-            Dex(chain_id=1, name="Uniswap", dex_type="V4",
-                factory_address="0x7ffe42c4a5deea5b0fec41c94c136cf115597227",
-                quoter_address="0x52f0e24d1c21c8a0cb1e5a5dd6198556bd9e1203"),
-            Dex(chain_id=42161, name="Uniswap", dex_type="V4",
-                factory_address="0x76fd297e2d437cd7f76d50f01afe6160f86e9990",
-                quoter_address="0x3972c00f7ed4885e145823eb7c655375d275a1c5"),
-            Dex(chain_id=56, name="Uniswap", dex_type="V4",
-                factory_address="0xd13dd3d6e93f276fafc9db9e6bb47c1180aee0c4",
-                quoter_address="0x9f75dd27d6664c475b90e105573e550ff69437b0")
+            Dex(
+                dex_id=dex.dex_id,
+                chain_id=dex.chain_id,
+                name=dex.name,
+                dex_type=dex.dex_type,
+                factory_address=dex.factory_address,
+                quoter_address=dex.quoter_address,
+            )
+            for dex in DEXS.values()
     ]
 
     with Session() as session:
@@ -59,20 +48,8 @@ def populate_dex(Session: sessionmaker):
     logger.info(f"Inserted {len(dexs)} dexs")
 
 def populate_tokens(Session: sessionmaker):
-    chain_ids = []
-    with Session() as session:
-        rows = session.scalars(select(Chains)).all()
-        for row in rows:
-            chain_ids.append(row.chain_id)
-
-    if len(chain_ids) == 0:
-        raise Exception("First populate the chains table")
-
-    load_dotenv()
-    coingecko_api = os.getenv("COINGECKO_API")
-    if coingecko_api is None:
-        raise Exception("Coingeck API missing in env file.")
-
+    chain_ids = CHAINS.keys()
+    coingecko_api = require_env("COINGECKO_API")
     platform_ids = []
     url = f"https://api.coingecko.com/api/v3/asset_platforms?x_cg_demo_api_key={coingecko_api}"
     response = requests.get(url)
@@ -107,6 +84,53 @@ def populate_tokens(Session: sessionmaker):
 
     logger.info(f"Inserted {len(tokens)} tokens")
 
-#def populate_pools(Session: sessionmaker):
-    
+def populate_pools(Session: sessionmaker):
+    rpc_api = require_env("ALCHEMY_API")
+    multicall_abi = require_abi(
+            file_path="db/abi/multicall_abi.json",
+            address=MULTICALL_ADDRESS
+    )
 
+    for chain in CHAINS:
+        rpc_url = chain.rpc_url + rpc_api
+        w3 = Web3(Web3.HTTPProvider(rpc_url))
+        if not w3.is_connected():
+            raise RuntimeError(f"Failed to connect to RPC at {rpc_url}")
+        
+        multicall_contract = w3.eth.contract(
+                address=MULTICALL_ADDRESS,
+                abi=multicall_abi
+        )
+
+        with Session() as session:
+            tokens = session.scalars(
+                    select(Tokens)
+                    .where(Tokens.chain_id == chain.chain_id)
+            ).all()
+
+        for dex in DEXS:
+           abi = require_abi(
+                   file_path=f"db/abi/{dex_name}_{dex_type}_abi.json",
+                   chain_id=dex.chain_id,
+                   address=dex.factory_address
+            )
+            factory_contract = w3.eth.contract(
+                    address=dex.factory_address,
+                    abi=abi
+            )
+            adapter = build_adapter(
+                    dex_name=dex.name,
+                    dex_type=dex.dex_type,
+                    factory_contract=factory_contract,
+                    multicall_contract=multicall_contract,
+                    tokens=tokens,
+                    chain_id=dex.chain_id,
+                    dex_id=dex.dex_id
+            )
+            
+            pools = adapter.fetch_pools() 
+            with Session() as session:
+                session.add_all(pools)
+                session.commit()
+            
+            logger.info(f"Inserted {len(pools)} pools: chain={dex.chain_id} dex={dex.name} {dex.dex_type}")

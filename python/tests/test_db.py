@@ -38,7 +38,7 @@ def test_populate_chains():
         assert eth.chain_id == 1
         assert eth.name == "Ethereum"
         assert eth.native_token == "ETH"
-        assert eth.evm_compatible == True
+        assert eth.evm == True
 
 def test_populate_dex():
     engine = create_engine("sqlite:///:memory:")
