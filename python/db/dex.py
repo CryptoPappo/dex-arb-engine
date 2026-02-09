@@ -54,45 +54,6 @@ def token_pair_fee_iter(
                 for fee in fees:
                     yield tokens0, tokens1, fee
 
-def build_adapter(
-        dex_name: str,
-        dex_type: str,
-        factory_contract: Contract,
-        multicall_contract: Contract,
-        tokens: list[Tokens],
-        chain_id: int,
-        dex_id: int
-    ) -> DexAdapter:
-    match (dex_name, dex_type):
-        case ("Uniswap", "V2"):
-            adapter = UniswapV2Adapter(
-                    factory_contract=factory_contract,
-                    multicall_contract=multicall_contract,
-                    tokens=tokens,
-                    chain_id=chain_id,
-                    dex_id=dex_id
-            )
-        case ("Uniswap", "V3"):
-            adapter = UniswapV3Adapter(
-                factory_contract=factory_contract,
-                multicall_contract=multicall_contract,
-                tokens=tokens,
-                chain_id=chain_id,
-                dex_id=dex_id
-            )
-        case ("Uniswap", "V4"):
-            adapter = UniswapV4Adapter(
-                factory_contract=factory_contract,
-                multicall_contract=multicall_contract,
-                tokens=tokens,
-                chain_id=chain_id,
-                dex_id=dex_id
-            )
-        case _:
-            raise RuntimeError(f"No adapter available for dex {dex_name} {dex_type}")
-    
-    return adapter
-
 class DexAdapter(ABC):
 
     @abstractmethod
@@ -287,3 +248,42 @@ class UniswapV4Adapter(DexAdapter):
                 pools.append(possible_pools[index])
 
         return pools
+
+def build_adapter(
+        dex_name: str,
+        dex_type: str,
+        factory_contract: Contract,
+        multicall_contract: Contract,
+        tokens: list[Tokens],
+        chain_id: int,
+        dex_id: int
+    ) -> DexAdapter:
+    match (dex_name, dex_type):
+        case ("Uniswap", "V2"):
+            adapter = UniswapV2Adapter(
+                    factory_contract=factory_contract,
+                    multicall_contract=multicall_contract,
+                    tokens=tokens,
+                    chain_id=chain_id,
+                    dex_id=dex_id
+            )
+        case ("Uniswap", "V3"):
+            adapter = UniswapV3Adapter(
+                factory_contract=factory_contract,
+                multicall_contract=multicall_contract,
+                tokens=tokens,
+                chain_id=chain_id,
+                dex_id=dex_id
+            )
+        case ("Uniswap", "V4"):
+            adapter = UniswapV4Adapter(
+                factory_contract=factory_contract,
+                multicall_contract=multicall_contract,
+                tokens=tokens,
+                chain_id=chain_id,
+                dex_id=dex_id
+            )
+        case _:
+            raise RuntimeError(f"No adapter available for dex {dex_name} {dex_type}")
+    
+    return adapter

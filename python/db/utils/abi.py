@@ -6,14 +6,14 @@ from db.utils.logging import get_logger
 logger = get_logger("abi")
 
 def download_abi(
-        chain_id: str,
+        chain_id: int,
         address: str
-    ) -> dict[str]:
+    ) -> list[dict]:
     etherscan_api = require_env("ETHERSCAN_API")
     url = "https://api.etherscan.io/v2/api"
     params = {
             "apikey": etherscan_api,
-            "chainid": chain_id,
+            "chainid": str(chain_id),
             "module": "contract",
             "action": "getabi",
             "address": address,
@@ -29,16 +29,17 @@ def require_abi(
         chain_id: int = 1,
         address: str = "",
         save: bool = True
-    ) -> dict[str]:
+    ) -> list[dict]:
     try:
         with open(file_path) as f:
             abi = json.load(f)
     except FileNotFoundError:
         abi = download_abi(chain_id, address)
+        abi = json.loads(abi["result"])
         if save:
             try:
                 with open(file_path, "w") as f:
-                    json.dump(abi, file_path)
+                    json.dump(abi, f)
                 logger.info(f"Abi successfully saved to {file_path}")
             except IOError as e:
                 logger.warning(f"Error saving abi: {e}")

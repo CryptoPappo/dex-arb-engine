@@ -91,7 +91,7 @@ def populate_pools(Session: sessionmaker):
             address=MULTICALL_ADDRESS
     )
 
-    for chain in CHAINS:
+    for chain in CHAINS.values():
         rpc_url = chain.rpc_url + rpc_api
         w3 = Web3(Web3.HTTPProvider(rpc_url))
         if not w3.is_connected():
@@ -108,9 +108,9 @@ def populate_pools(Session: sessionmaker):
                     .where(Tokens.chain_id == chain.chain_id)
             ).all()
 
-        for dex in DEXS:
-           abi = require_abi(
-                   file_path=f"db/abi/{dex_name}_{dex_type}_abi.json",
+        for dex in DEXS.values():
+            abi = require_abi(
+                   file_path=f"db/abi/{dex.name}_{dex.dex_type}_abi.json",
                    chain_id=dex.chain_id,
                    address=dex.factory_address
             )
