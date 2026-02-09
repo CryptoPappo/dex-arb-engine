@@ -8,7 +8,7 @@ logger = get_logger("abi")
 def download_abi(
         chain_id: int,
         address: str
-    ) -> list[dict]:
+    ) -> list[dict[str, str]]:
     etherscan_api = require_env("ETHERSCAN_API")
     url = "https://api.etherscan.io/v2/api"
     params = {
@@ -29,7 +29,7 @@ def require_abi(
         chain_id: int = 1,
         address: str = "",
         save: bool = True
-    ) -> list[dict]:
+    ) -> list[dict[str, str]]:
     try:
         with open(file_path) as f:
             abi = json.load(f)

@@ -1,15 +1,44 @@
 import requests
+from typing import Union, Callable, TypeAlias
 from web3 import Web3
+from web3.contract.contract import Contract
 from sqlalchemy import select
 from sqlalchemy.orm.session import sessionmaker
 
-from db.models import Chains, Dex, Tokens
-from db.dex import build_adapter
+from db.dex import DexAdapter, build_adapter
 from db.utils.logging import get_logger 
 from db.utils.tools import require_env
 from db.utils.abi import require_abi
-from db.config import CHAINS, DEXS, MULTICALL_ADDRESS
+from db.config import (
+        CHAINS,
+        DEXS, 
+        MULTICALL_ADDRESS,
+        ChainConfig,
+        DexConfig
+)
+from db.models import (
+        Chains,
+        Dex,
+        Tokens,
+        Pools
+)
+AbiLoader: TypeAlias = Callable[
+        [str, int, str, bool],
+        list[dict[str, str]]
+] 
+AdapterFactory: TypeAlias = Callable[
+        [str, str, Contract, Contract, list[Tokens], int, int],
+        DexAdapter
+]
 logger = get_logger("populate_tables")
+
+def populate_table(
+        Session: sessionmaker,
+        data: list[Union[Chains, Dex, Tokens, Pools]]
+):
+    with Session() as session:
+        session.add_all(data)
+        session.commit()
 
 def populate_chains(Session: sessionmaker):
     chains = [
@@ -22,10 +51,7 @@ def populate_chains(Session: sessionmaker):
             for chain in CHAINS.values()
     ]
 
-    with Session() as session:
-        session.add_all(chains)
-        session.commit()
-    
+    populate_table(Session, chains)    
     logger.info(f"Inserted {len(chains)} chains")
     
 def populate_dex(Session: sessionmaker):
@@ -41,10 +67,7 @@ def populate_dex(Session: sessionmaker):
             for dex in DEXS.values()
     ]
 
-    with Session() as session:
-        session.add_all(dexs)
-        session.commit()
-    
+    populate_table(Session, dexs)    
     logger.info(f"Inserted {len(dexs)} dexs")
 
 def populate_tokens(Session: sessionmaker):
@@ -78,24 +101,26 @@ def populate_tokens(Session: sessionmaker):
         for token in tokens_data
     ]
 
-    with Session() as session:
-        session.add_all(tokens)
-        session.commit()
-
+    populate_table(Session, tokens)
     logger.info(f"Inserted {len(tokens)} tokens")
 
-def populate_pools(Session: sessionmaker):
-    rpc_api = require_env("ALCHEMY_API")
-    multicall_abi = require_abi(
-            file_path="db/abi/multicall_abi.json",
-            address=MULTICALL_ADDRESS
+def populate_pools(
+        Session: sessionmaker,
+        chains: list[ChainConfig],
+        dexs: list[DexConfig],
+        web3_by_chain: dict[int, Web3],
+        abi_loader: AbiLoader = require_abi,
+        adapter_factory: AdapterFactory = build_adapter
+    ):
+    multicall_abi = abi_loader(
+            "db/abi/multicall_abi.json",
+            1,
+            MULTICALL_ADDRESS,
+            True
     )
 
-    for chain in CHAINS.values():
-        rpc_url = chain.rpc_url + rpc_api
-        w3 = Web3(Web3.HTTPProvider(rpc_url))
-        if not w3.is_connected():
-            raise RuntimeError(f"Failed to connect to RPC at {rpc_url}")
+    for chain in chains.values():
+        w3 = web3_by_chain[chain.chain_id]
         
         multicall_contract = w3.eth.contract(
                 address=MULTICALL_ADDRESS,
@@ -108,17 +133,18 @@ def populate_pools(Session: sessionmaker):
                     .where(Tokens.chain_id == chain.chain_id)
             ).all()
 
-        for dex in DEXS.values():
-            abi = require_abi(
-                   file_path=f"db/abi/{dex.name}_{dex.dex_type}_abi.json",
-                   chain_id=dex.chain_id,
-                   address=dex.factory_address
+        for dex in dexs.values():
+            abi = abi_loader(
+                   f"db/abi/{dex.name}_{dex.dex_type}_abi.json",
+                   dex.chain_id,
+                   dex.factory_address,
+                   True
             )
             factory_contract = w3.eth.contract(
                     address=dex.factory_address,
                     abi=abi
             )
-            adapter = build_adapter(
+            adapter = adapter_factory(
                     dex_name=dex.name,
                     dex_type=dex.dex_type,
                     factory_contract=factory_contract,
@@ -127,10 +153,7 @@ def populate_pools(Session: sessionmaker):
                     chain_id=dex.chain_id,
                     dex_id=dex.dex_id
             )
-            
             pools = adapter.fetch_pools() 
-            with Session() as session:
-                session.add_all(pools)
-                session.commit()
-            
+
+            populate_table(Session, pools)
             logger.info(f"Inserted {len(pools)} pools: chain={dex.chain_id} dex={dex.name} {dex.dex_type}")

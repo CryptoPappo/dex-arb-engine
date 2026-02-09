@@ -2,6 +2,7 @@ import pytest
 import os
 import sys
 import responses
+from unittest.mock import MagicMock, patch
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, inspect, select
 from sqlalchemy.orm import sessionmaker
@@ -11,8 +12,18 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
 sys.path.append(parent_dir)
 
-from db.models import Base, Chains, Dex, Tokens
-from db.populate_tables import populate_chains, populate_dex, populate_tokens
+from db.models import (
+        Base,
+        Chains,
+        Dex,
+        Tokens
+)
+from db.populate_tables import (
+        populate_chains,
+        populate_dex,
+        populate_tokens,
+        populate_pools
+)
 
 def test_tables_created():
     engine = create_engine("sqlite:///:memory:")
@@ -149,3 +160,36 @@ def test_populate_tokens():
                 ).first()
         assert wbtc.address == "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
         assert wbtc.decimals == 8
+
+def test_populate_pools():
+    Session = MagicMock()
+
+    fake_chain = MagicMock(chain_id=1, name="Ethereum")
+    fake_chains = {1: fake_chain}
+    fake_dex = MagicMock(dex_id=1, name="Uniswap", dex_type="V2", chain_id=1, factory_address="0x")
+    fake_dexs = {1: fake_dex}
+    fake_w3 = MagicMock()
+    fake_w3_by_chain = {1: fake_w3}
+
+    fake_adapter = MagicMock()
+    fake_adapter.fetch_pools.return_value = ["pool1", "pool2"]
+
+    def fake_adapter_factory(dex_name, dex_type, factory_contract, multicall_contract,
+            tokens, chain_id, dex_id):
+        return fake_adapter
+
+    def fake_abi_loader(path, chain_id, address, save):
+        return {"fake": "abi"}
+    
+    with patch("db.populate_tables.populate_table") as insert_mock:
+        populate_pools(
+                Session,
+                chains=fake_chains,
+                dexs=fake_dexs,
+                web3_by_chain=fake_w3_by_chain,
+                abi_loader=fake_abi_loader,
+                adapter_factory=fake_adapter_factory
+        )
+
+    fake_adapter.fetch_pools.assert_called_once()
+    insert_mock.assert_called_once_with(Session, ["pool1", "pool2"])
