@@ -16,14 +16,101 @@ from db.models import (
         Base,
         Chains,
         Dexs,
-        Tokens
+        Tokens,
+        Pools
 )
 from db.populate_tables import (
         populate_chains,
-        populate_dex,
+        populate_dexs,
         populate_tokens,
         populate_pools
 )
+
+def mock_chains():
+    chains = [
+            Chains(
+                chain_id=1,
+                name="Ethereum",
+                native_token="ETH",
+                evm=True
+            ),
+            Chains(
+                chain_id=56,
+                name="Binance Smart Chain",
+                native_token="BNB",
+                evm=True
+            )
+    ]
+    
+    return chains
+
+def mock_dexs():
+    dexs = [
+            Dexs(
+                dex_id=1,
+                chain_id=1,
+                name="Uniswap",
+                dex_type="V2",
+                factory_address="0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
+                quoter_address="0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
+            ),
+            Dexs(
+                dex_id=2,
+                chain_id=1,
+                name="Uniswap",
+                dex_type="V3",
+                factory_address="0x6C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
+                quoter_address="0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
+            )
+    ]
+
+    return dexs
+
+def mock_pools():
+    pools = [
+            Pools(
+                chain_id=1,
+                pool_address="0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
+                dex_id=1,
+                token0=1,
+                token1=2,
+                fee=100,
+                tick_spacing=10
+            ),
+            Pools(
+                chain_id=1,
+                pool_address="0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
+                dex_id=1,
+                token0=1,
+                token1=2,
+                fee=100,
+                tick_spacing=10
+            )
+    ]
+    
+    return pools
+
+def mock_tokens():
+    tokens = [
+            Tokens(
+                coin_id=1,
+                chain_id=1,
+                name="Wrapped Bitcoin",
+                symbol="WBTC",
+                address="",
+                decimals=8
+            ),
+            Tokens(
+                coin_id=2,
+                chain_id=1,
+                name="Wrapped Ethereum",
+                symbol="WETH",
+                address="",
+                decimals=18
+            )
+    ]
+    
+    return tokens
 
 def test_tables_created():
     engine = create_engine("sqlite:///:memory:")
@@ -41,20 +128,7 @@ def test_populate_chains():
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
     
-    chains = [
-            Chains(
-                chain_id=1,
-                name="Ethereum",
-                native_token="ETH",
-                evm=True
-            ),
-            Chains(
-                chain_id=56,
-                name="Binance Smart Chain",
-                native_token="BNB",
-                evm=True
-            )
-    ]
+    chains = mock_chains() 
     Session = sessionmaker(bind=engine)
     populate_chains(Session, chains)
 
@@ -67,15 +141,18 @@ def test_populate_chains():
         assert eth.native_token == "ETH"
         assert eth.evm == True
 
-def test_populate_dex():
+def test_populate_dexs():
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
 
     Session = sessionmaker(bind=engine)
-    populate_dex(Session)
+    dexs = mock_dexs()
+    populate_dexs(Session, dexs)
 
     with Session() as session:
-        dex = session.get(Dex, 1)
+        rows = session.scalars(select(Dexs)).all()
+        assert len(rows) == 2
+        dex = rows[0]
         assert dex.chain_id == 1
         assert dex.name == "Uniswap"
         assert dex.dex_type == "V2"
@@ -86,19 +163,31 @@ def test_duplicates():
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
 
+    chains = mock_chains()
+    dexs = mock_dexs()
+
     Session = sessionmaker(bind=engine) 
-    populate_chains(Session)
-    populate_dex(Session)
+    populate_chains(Session, chains)
+    populate_dexs(Session, dexs)
 
-    with pytest.raises(IntegrityError) as excinfo_chains:
-        populate_chains(Session)
-    
-    with pytest.raises(IntegrityError) as excinfo_dex:
-        populate_dex(Session)
-    
-    assert excinfo_chains.type is IntegrityError
-    assert excinfo_dex.type is IntegrityError
+    with Session() as session:
+        rows_chains = session.scalars(select(Chains)).all()
+        rows_dexs = session.scalars(select(Dexs)).all()
+        initial_chains = len(rows_chains)
+        initial_dexs = len(rows_dexs)
 
+    populate_chains(Session, chains)
+    populate_dexs(Session, dexs)
+
+    with Session() as session:
+        rows_chains = session.scalars(select(Chains)).all()
+        rows_dexs = session.scalars(select(Dexs)).all()
+        final_chains = len(rows_chains)
+        final_dexs = len(rows_dexs)
+    
+    assert initial_chains == final_chains
+    assert initial_dexs == final_dexs
+    
 @responses.activate
 def test_populate_tokens():
     load_dotenv()
@@ -162,33 +251,32 @@ def test_populate_tokens():
     Base.metadata.create_all(engine)
 
     Session = sessionmaker(bind=engine)
-    populate_chains(Session)
-    populate_tokens(Session) 
+    chains = mock_chains()
+    populate_tokens(Session, chains) 
     
     with Session() as session:
         rows = session.scalars(select(Tokens)).all()
-        assert len(rows) != 0
-        
-        wbtc = session.scalars(
-                select(Tokens)
-                .where(Tokens.chain_id == 1)
-                .where(Tokens.symbol == "WBTC")
-                ).first()
+        assert len(rows) == 2
+        wbtc = rows[0] 
         assert wbtc.address == "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
         assert wbtc.decimals == 8
 
 def test_populate_pools():
-    Session = MagicMock()
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
 
-    fake_chain = MagicMock(chain_id=1, name="Ethereum")
-    fake_chains = {1: fake_chain}
-    fake_dex = MagicMock(dex_id=1, name="Uniswap", dex_type="V2", chain_id=1, factory_address="0x")
-    fake_dexs = {1: fake_dex}
+    chains = mock_chains()[:1]
+    dexs = mock_dexs()[:1]
+    tokens = mock_tokens()
+    tokens_by_chain = {1: tokens}
+    pools = mock_pools()
+
     fake_w3 = MagicMock()
     fake_w3_by_chain = {1: fake_w3}
 
     fake_adapter = MagicMock()
-    fake_adapter.fetch_pools.return_value = ["pool1", "pool2"]
+    fake_adapter.fetch_pools.return_value = pools
 
     def fake_adapter_factory(dex_name, dex_type, factory_contract, multicall_contract,
             tokens, chain_id, dex_id):
@@ -197,15 +285,25 @@ def test_populate_pools():
     def fake_abi_loader(path, chain_id, address, save):
         return {"fake": "abi"}
     
-    with patch("db.populate_tables.populate_table") as insert_mock:
-        populate_pools(
-                Session,
-                chains=fake_chains,
-                dexs=fake_dexs,
-                web3_by_chain=fake_w3_by_chain,
-                abi_loader=fake_abi_loader,
-                adapter_factory=fake_adapter_factory
-        )
+    populate_pools(
+            Session,
+            chains=chains,
+            dexs=dexs,
+            tokens_by_chain=tokens_by_chain,
+            web3_by_chain=fake_w3_by_chain,
+            abi_loader=fake_abi_loader,
+            adapter_factory=fake_adapter_factory
+    )
 
     fake_adapter.fetch_pools.assert_called_once()
-    insert_mock.assert_called_once_with(Session, ["pool1", "pool2"])
+    with Session() as session:
+        rows = session.scalars(select(Pools)).all()
+        assert len(rows) == 2
+        pool0 = rows[0]
+        assert pool0.chain_id == 1
+        assert pool0.pool_address == "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"
+        assert pool0.dex_id == 1
+        assert pool0.token0 == 1
+        assert pool0.token1 == 2
+        assert pool0.fee == 100
+        assert pool0.tick_spacing == 10

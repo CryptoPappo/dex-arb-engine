@@ -11,8 +11,6 @@ from db.utils.logging import get_logger
 from db.utils.tools import require_env
 from db.utils.abi import require_abi
 from db.config import (
-        CHAINS,
-        DEXS, 
         MULTICALL_ADDRESS,
         ChainConfig,
         DexConfig
@@ -65,31 +63,41 @@ def populate_chains(
     inserted = populate_table(Session, stmt)
     logger.info(f"Chains insert: attempted={len(chains_dict)} inserted={inserted}")
     
-def populate_dex(Session: sessionmaker):
-    dexs = [
-            Dex(
-                dex_id=dex.dex_id,
-                chain_id=dex.chain_id,
-                name=dex.name,
-                dex_type=dex.dex_type,
-                factory_address=dex.factory_address,
-                quoter_address=dex.quoter_address,
-            )
-            for dex in DEXS.values()
+def populate_dexs(
+        Session: sessionmaker,
+        dexs: list[Union[Dexs, DexConfig]]
+):
+    dexs_dict = [
+            {
+                "dex_id": dex.dex_id,
+                "chain_id": dex.chain_id,
+                "name": dex.name,
+                "dex_type": dex.dex_type,
+                "factory_address": dex.factory_address,
+                "quoter_address": dex.quoter_address,
+            }
+            for dex in dexs
     ]
+    stmt = insert(Dexs).values(dexs_dict)
+    stmt = stmt.on_conflict_do_nothing(
+            constraint="uq_dex_address_chain"
+    )
+    
+    inserted = populate_table(Session, stmt)    
+    logger.info(f"Dexs insert: attempted={len(dexs_dict)} inserted={inserted}")
 
-    populate_table(Session, dexs)    
-    logger.info(f"Inserted {len(dexs)} dexs")
-
-def populate_tokens(Session: sessionmaker):
-    chain_ids = CHAINS.keys()
+def populate_tokens(
+        Session: sessionmaker,
+        chains: list[Union[Chains, ChainConfig]],
+):
+    chain_ids = [chain.chain_id for chain in chains]
     coingecko_api = require_env("COINGECKO_API")
     platform_ids = []
     url = f"https://api.coingecko.com/api/v3/asset_platforms?x_cg_demo_api_key={coingecko_api}"
     response = requests.get(url)
     response.raise_for_status()
-    chains = response.json()
-    for chain in chains:
+    chains_gecko = response.json()
+    for chain in chains_gecko:
         if chain["chain_identifier"] in chain_ids:
             platform_ids.append(chain["id"])
 
@@ -101,24 +109,29 @@ def populate_tokens(Session: sessionmaker):
         data = response.json()
         tokens_data.extend(data["tokens"])
 
-    tokens = [
-        Tokens(
-            chain_id=token["chainId"],
-            name=token["name"], 
-            symbol=token["symbol"], 
-            address=token["address"],
-            decimals=token["decimals"]
-          )
-        for token in tokens_data
+    tokens_dict = [
+            {
+                "chain_id": token["chainId"],
+                "name": token["name"], 
+                "symbol": token["symbol"], 
+                "address": token["address"],
+                "decimals": token["decimals"]
+            }
+            for token in tokens_data
     ]
+    stmt = insert(Tokens).values(tokens_dict)
+    stmt = stmt.on_conflict_do_nothing(
+            constraint="uq_tokens_address_chain"
+    )
 
-    populate_table(Session, tokens)
-    logger.info(f"Inserted {len(tokens)} tokens")
+    inserted = populate_table(Session, stmt)
+    logger.info(f"Tokens insert: attempted={len(tokens_dict)} inserted={inserted}")
 
 def populate_pools(
         Session: sessionmaker,
-        chains: list[ChainConfig],
-        dexs: list[DexConfig],
+        chains: list[Union[Chains, ChainConfig]],
+        dexs: list[Union[Dexs, DexConfig]],
+        tokens_by_chain: dict[int, list[Tokens]],
         web3_by_chain: dict[int, Web3],
         abi_loader: AbiLoader = require_abi,
         adapter_factory: AdapterFactory = build_adapter
@@ -130,21 +143,14 @@ def populate_pools(
             True
     )
 
-    for chain in chains.values():
+    for chain in chains:
         w3 = web3_by_chain[chain.chain_id]
-        
         multicall_contract = w3.eth.contract(
                 address=MULTICALL_ADDRESS,
                 abi=multicall_abi
         )
-
-        with Session() as session:
-            tokens = session.scalars(
-                    select(Tokens)
-                    .where(Tokens.chain_id == chain.chain_id)
-            ).all()
-
-        for dex in dexs.values():
+        tokens = tokens_by_chain[chain.chain_id]
+        for dex in dexs:
             abi = abi_loader(
                    f"db/abi/{dex.name}_{dex.dex_type}_abi.json",
                    dex.chain_id,
@@ -165,6 +171,23 @@ def populate_pools(
                     dex_id=dex.dex_id
             )
             pools = adapter.fetch_pools() 
+            pools_dict = [
+                    {
+                        "chain_id": pool.chain_id,
+                        "pool_address": pool.pool_address,
+                        "dex_id": pool.dex_id,
+                        "token0": pool.token0,
+                        "token1": pool.token1,
+                        "fee": pool.fee,
+                        "tick_spacing": pool.tick_spacing,
+                    }
+                    for pool in pools
+            ]
+            stmt = insert(Pools).values(pools_dict)
+            stmt = stmt.on_conflict_do_nothing(
+                   constraint="pools_pkey"
+            )
 
-            populate_table(Session, pools)
-            logger.info(f"Inserted {len(pools)} pools: chain={dex.chain_id} dex={dex.name} {dex.dex_type}")
+            inserted = populate_table(Session, stmt)
+            logger.info(f"Pools chain={dex.chain_id} dex={dex.name}-{dex.dex_type} insert: \
+attempted={len(pools_dict)} inserted={inserted}")

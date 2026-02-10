@@ -49,5 +49,10 @@ def main():
 
     logger.info("Bootstrap completed successfully")
 
+with Session() as session:
+            tokens = session.scalars(
+                    select(Tokens)
+                    .where(Tokens.chain_id == chain.chain_id)
+            ).all()
 if __name__ == "__main__":
     main()

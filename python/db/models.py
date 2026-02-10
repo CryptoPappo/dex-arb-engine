@@ -86,7 +86,7 @@ class Pools(Base):
     )
     pool_address: Mapped[str] = mapped_column(
             String(45),
-            primart_key=True
+            primary_key=True
     )
     dex_id: Mapped[int] = mapped_column(ForeignKey("dexs.dex_id"))
     token0: Mapped[str] = mapped_column(ForeignKey("tokens.coin_id"))
@@ -94,7 +94,7 @@ class Pools(Base):
     fee: Mapped[int] 
     tick_spacing: Mapped[Optional[int]]
     active: Mapped[Optional[bool]]
-
+    
     chains: Mapped[Chains] = relationship(back_populates="pools")
     dex: Mapped[Dexs] = relationship(back_populates="pools")
     tokens0: Mapped[Tokens] = relationship(
