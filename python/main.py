@@ -1,7 +1,10 @@
+from web3 import Web3
 
 from db.utils.logging import get_logger
+from db.utils.tools import require_env
 from db.connection import create_connection
 from db.models import Base
+from db.config import CHAINS, DEXS
 from db.populate_tables import (
         populate_chains,
         populate_dex,
@@ -27,8 +30,22 @@ def main():
     logger.info("Populating tokens")
     populate_tokens(session)
 
+    rpc_api = require_env("RPC_API")
+    web3_by_chain = {}
+    for chain in CHAINS.values():
+        rpc_url = chain.rpc_url + rpc_api
+        w3 = Web3(Web3.HTTPProvider(rpc_url))
+
+        if not w3.is_connected():
+            raise RuntimeError(f"RPC down for chain {chain.name}")
+
     logger.info("Populating pools")
-    populate_pools(session)
+    populate_pools(
+            session,
+            CHAINS,
+            DEXS,
+            web3_by_chain,
+    )
 
     logger.info("Bootstrap completed successfully")
 
