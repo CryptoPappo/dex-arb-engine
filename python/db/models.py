@@ -34,7 +34,7 @@ class Tokens(Base):
 
     coin_id: Mapped[int] = mapped_column(primary_key=True)
     chain_id: Mapped[int] = mapped_column(ForeignKey("chains.chain_id"))
-    name: Mapped[str] = mapped_column(String(20))
+    name: Mapped[str] = mapped_column(String(40))
     symbol: Mapped[str] = mapped_column(String(6))
     address: Mapped[str] = mapped_column(String(45))
     decimals: Mapped[int]
@@ -62,7 +62,7 @@ class Dex(Base):
 
     dex_id: Mapped[int] = mapped_column(primary_key=True)
     chain_id: Mapped[int] = mapped_column(ForeignKey("chains.chain_id"))
-    name: Mapped[str] = mapped_column(String(20)) 
+    name: Mapped[str] = mapped_column(String(30)) 
     dex_type: Mapped[str] = mapped_column(String(5))
     factory_address: Mapped[str] = mapped_column(String(45))
     quoter_address: Mapped[Optional[str]]
