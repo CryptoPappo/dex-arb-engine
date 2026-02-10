@@ -7,7 +7,7 @@ from db.models import Base
 from db.config import CHAINS, DEXS
 from db.populate_tables import (
         populate_chains,
-        populate_dex,
+        populate_dexs,
         populate_tokens,
         populate_pools
 )
@@ -22,16 +22,17 @@ def main():
     Base.metadata.create_all(engine)
 
     logger.info("Populating chains")
-    populate_chains(session)
+    populate_chains(session, CHAINS.values())
 
     logger.info("Populating DEXs")
-    populate_dex(session)
+    populate_dex(session, DEXS.values())
 
     logger.info("Populating tokens")
-    populate_tokens(session)
+    populate_tokens(session, CHAINS.values())
 
     rpc_api = require_env("RPC_API")
     web3_by_chain = {}
+    tokens_by_chain = {}
     for chain in CHAINS.values():
         rpc_url = chain.rpc_url + rpc_api
         w3 = Web3(Web3.HTTPProvider(rpc_url))
@@ -39,20 +40,23 @@ def main():
         if not w3.is_connected():
             raise RuntimeError(f"RPC down for chain {chain.name}")
 
+        with Session() as session:
+            tokens = session.scalars(
+                select(Tokens)
+                .where(Tokens.chain_id == chain.chain_id)
+            ).all()
+            tokens_by_chain[chain.chain_id] = tokens
+
     logger.info("Populating pools")
     populate_pools(
             session,
-            CHAINS,
-            DEXS,
+            CHAINS.values(),
+            DEXS.values(),
+            tokens_by_chain,
             web3_by_chain,
     )
 
     logger.info("Bootstrap completed successfully")
 
-with Session() as session:
-            tokens = session.scalars(
-                    select(Tokens)
-                    .where(Tokens.chain_id == chain.chain_id)
-            ).all()
 if __name__ == "__main__":
     main()
