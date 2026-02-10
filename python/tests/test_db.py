@@ -15,7 +15,7 @@ sys.path.append(parent_dir)
 from db.models import (
         Base,
         Chains,
-        Dex,
+        Dexs,
         Tokens
 )
 from db.populate_tables import (
@@ -33,19 +33,35 @@ def test_tables_created():
     tables = inspector.get_table_names()
 
     assert "chains" in tables
-    assert "dex" in tables
+    assert "dexs" in tables
     assert "tokens" in tables
     assert "pools" in tables
 
 def test_populate_chains():
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
-
+    
+    chains = [
+            Chains(
+                chain_id=1,
+                name="Ethereum",
+                native_token="ETH",
+                evm=True
+            ),
+            Chains(
+                chain_id=56,
+                name="Binance Smart Chain",
+                native_token="BNB",
+                evm=True
+            )
+    ]
     Session = sessionmaker(bind=engine)
-    populate_chains(Session)
+    populate_chains(Session, chains)
 
     with Session() as session:
-        eth = session.scalars(select(Chains).where(Chains.chain_id == 1)).first()
+        rows = session.scalars(select(Chains)).all()
+        assert len(rows) == 2
+        eth = rows[0]
         assert eth.chain_id == 1
         assert eth.name == "Ethereum"
         assert eth.native_token == "ETH"

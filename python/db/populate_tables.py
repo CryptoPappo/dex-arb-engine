@@ -3,6 +3,7 @@ from typing import Union, Callable, TypeAlias
 from web3 import Web3
 from web3.contract.contract import Contract
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert, Insert
 from sqlalchemy.orm.session import sessionmaker
 
 from db.dex import DexAdapter, build_adapter
@@ -18,7 +19,7 @@ from db.config import (
 )
 from db.models import (
         Chains,
-        Dex,
+        Dexs,
         Tokens,
         Pools
 )
@@ -34,25 +35,35 @@ logger = get_logger("populate_tables")
 
 def populate_table(
         Session: sessionmaker,
-        data: list[Union[Chains, Dex, Tokens, Pools]]
-):
+        stmt: Insert
+) -> int:
     with Session() as session:
-        session.add_all(data)
+        result = session.execute(stmt)
+        inserted = result.rowcount
         session.commit()
 
-def populate_chains(Session: sessionmaker):
-    chains = [
-            Chains(
-                chain_id=chain.chain_id,
-                name=chain.name,
-                native_token=chain.native_token,
-                evm=chain.evm,
-            )
-            for chain in CHAINS.values()
-    ]
+    return inserted
 
-    populate_table(Session, chains)    
-    logger.info(f"Inserted {len(chains)} chains")
+def populate_chains(
+        Session: sessionmaker,
+        chains: list[Union[Chains, ChainConfig]]
+):
+    chains_dict = [
+            {
+                "chain_id": chain.chain_id,
+                "name": chain.name,
+                "native_token": chain.native_token,
+                "evm": chain.evm
+            }
+            for chain in chains
+    ]
+    stmt = insert(Chains).values(chains_dict)
+    stmt = stmt.on_conflict_do_nothing(
+            index_elements=[Chains.chain_id]
+    )
+        
+    inserted = populate_table(Session, stmt)
+    logger.info(f"Chains insert: attempted={len(chains_dict)} inserted={inserted}")
     
 def populate_dex(Session: sessionmaker):
     dexs = [

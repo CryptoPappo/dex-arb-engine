@@ -23,7 +23,7 @@ class Chains(Base):
     evm: Mapped[bool]
     
     tokens: Mapped[List["Tokens"]] = relationship(back_populates="chains")
-    dex: Mapped[List["Dex"]] = relationship(back_populates="chains")
+    dex: Mapped[List["Dexs"]] = relationship(back_populates="chains")
     pools: Mapped[List["Pools"]] = relationship(back_populates="chains")
     
     def __repr__(self) -> str:
@@ -57,8 +57,8 @@ class Tokens(Base):
         return f"Token(id={self.coin_id}, chain_id={self.chain_id}, \
 symbol={self.symbol}, address={self.address})"
        
-class Dex(Base):
-    __tablename__ = "dex"
+class Dexs(Base):
+    __tablename__ = "dexs"
 
     dex_id: Mapped[int] = mapped_column(primary_key=True)
     chain_id: Mapped[int] = mapped_column(ForeignKey("chains.chain_id"))
@@ -88,7 +88,7 @@ class Pools(Base):
             String(45),
             primart_key=True
     )
-    dex_id: Mapped[int] = mapped_column(ForeignKey("dex.dex_id"))
+    dex_id: Mapped[int] = mapped_column(ForeignKey("dexs.dex_id"))
     token0: Mapped[str] = mapped_column(ForeignKey("tokens.coin_id"))
     token1: Mapped[str] = mapped_column(ForeignKey("tokens.coin_id"))
     fee: Mapped[int] 
@@ -96,7 +96,7 @@ class Pools(Base):
     active: Mapped[Optional[bool]]
 
     chains: Mapped[Chains] = relationship(back_populates="pools")
-    dex: Mapped[Dex] = relationship(back_populates="pools")
+    dex: Mapped[Dexs] = relationship(back_populates="pools")
     tokens0: Mapped[Tokens] = relationship(
             back_populates="pools_as_token0",
             foreign_keys=[token0]
