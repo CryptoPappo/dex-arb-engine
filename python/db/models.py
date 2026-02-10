@@ -23,7 +23,7 @@ class Chains(Base):
     evm: Mapped[bool]
     
     tokens: Mapped[List["Tokens"]] = relationship(back_populates="chains")
-    dex: Mapped[List["Dexs"]] = relationship(back_populates="chains")
+    dexs: Mapped[List["Dexs"]] = relationship(back_populates="chains")
     pools: Mapped[List["Pools"]] = relationship(back_populates="chains")
     
     def __repr__(self) -> str:
@@ -34,8 +34,8 @@ class Tokens(Base):
 
     coin_id: Mapped[int] = mapped_column(primary_key=True)
     chain_id: Mapped[int] = mapped_column(ForeignKey("chains.chain_id"))
-    name: Mapped[str] = mapped_column(String(40))
-    symbol: Mapped[str] = mapped_column(String(6))
+    name: Mapped[str] = mapped_column(String(100))
+    symbol: Mapped[str] = mapped_column(String(25))
     address: Mapped[str] = mapped_column(String(45))
     decimals: Mapped[int]
     
@@ -71,8 +71,8 @@ class Dexs(Base):
             UniqueConstraint("factory_address", "chain_id", name="uq_dex_address_chain"),
     )
 
-    chains: Mapped[Chains] = relationship(back_populates="dex")
-    pools: Mapped[List["Pools"]] = relationship(back_populates="dex")
+    chains: Mapped[Chains] = relationship(back_populates="dexs")
+    pools: Mapped[List["Pools"]] = relationship(back_populates="dexs")
     def __repr__(self) -> str:
         return f"Dex(id={self.dex_id}, chain_id={self.chain_id}, name={self.name}, \
 dex_type={self.dex_type})"
@@ -96,7 +96,7 @@ class Pools(Base):
     active: Mapped[Optional[bool]]
     
     chains: Mapped[Chains] = relationship(back_populates="pools")
-    dex: Mapped[Dexs] = relationship(back_populates="pools")
+    dexs: Mapped[Dexs] = relationship(back_populates="pools")
     tokens0: Mapped[Tokens] = relationship(
             back_populates="pools_as_token0",
             foreign_keys=[token0]

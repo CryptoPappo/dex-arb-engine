@@ -1,9 +1,10 @@
+from sqlalchemy import select
 from web3 import Web3
 
 from db.utils.logging import get_logger
 from db.utils.tools import require_env
 from db.connection import create_connection
-from db.models import Base
+from db.models import Base, Tokens
 from db.config import CHAINS, DEXS
 from db.populate_tables import (
         populate_chains,
@@ -16,19 +17,19 @@ logger = get_logger("main")
 def main():
     logger.info("Starting dex-arb-engine bootstrap")
 
-    engine, session = create_connection("DATABASE_URL")
+    engine, Session = create_connection("DATABASE_URL")
 
     logger.info("Creating database schema")
     Base.metadata.create_all(engine)
 
     logger.info("Populating chains")
-    populate_chains(session, CHAINS.values())
+    populate_chains(Session, CHAINS.values())
 
     logger.info("Populating DEXs")
-    populate_dex(session, DEXS.values())
+    populate_dexs(Session, DEXS.values())
 
     logger.info("Populating tokens")
-    populate_tokens(session, CHAINS.values())
+    populate_tokens(Session, CHAINS.values())
 
     rpc_api = require_env("RPC_API")
     web3_by_chain = {}
@@ -40,6 +41,8 @@ def main():
         if not w3.is_connected():
             raise RuntimeError(f"RPC down for chain {chain.name}")
 
+        web3_by_chain[chain.chain_id] = w3
+
         with Session() as session:
             tokens = session.scalars(
                 select(Tokens)
@@ -49,7 +52,7 @@ def main():
 
     logger.info("Populating pools")
     populate_pools(
-            session,
+            Session,
             CHAINS.values(),
             DEXS.values(),
             tokens_by_chain,
