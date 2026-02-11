@@ -113,6 +113,10 @@ class UniswapV2Adapter(DexAdapter):
         
         pools = []
         for index, data in enumerate(data_encoded):
+            success = data[0]
+            if not success:
+                raise RuntimeError("Error in multicall")
+
             pool_data = decode_data(
                     ["getPair"],
                     [data[1]],
@@ -177,6 +181,10 @@ class UniswapV3Adapter(DexAdapter):
         
         pools = []
         for index, data in enumerate(data_encoded):
+            success = data[0]
+            if not success:
+                raise RuntimeError("Error in multicall")
+
             pool_data = decode_data(
                     ["getPool"],
                     [data[1]],
@@ -256,6 +264,10 @@ class UniswapV4Adapter(DexAdapter):
         
         pools = []
         for index, data in enumerate(data_encoded):
+            success = data[0]
+            if not success:
+                raise RuntimeError("Error in multicall")
+
             pool_data = decode_data(
                     ["getLiquidity"],
                     [data[1]],
