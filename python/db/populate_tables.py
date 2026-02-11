@@ -146,7 +146,7 @@ def populate_pools(
     for chain in chains:
         w3 = web3_by_chain[chain.chain_id]
         multicall_contract = w3.eth.contract(
-                address=MULTICALL_ADDRESS,
+                address=Web3.to_checksum_address(MULTICALL_ADDRESS),
                 abi=multicall_abi
         )
         tokens = tokens_by_chain[chain.chain_id]
@@ -158,7 +158,7 @@ def populate_pools(
                    True
             )
             factory_contract = w3.eth.contract(
-                    address=dex.factory_address,
+                    address=Web3.to_checksum_address(dex.factory_address),
                     abi=abi
             )
             adapter = adapter_factory(
