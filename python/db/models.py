@@ -85,7 +85,7 @@ class Pools(Base):
             primary_key=True
     )
     pool_address: Mapped[str] = mapped_column(
-            String(45),
+            String(100),
             primary_key=True
     )
     dex_id: Mapped[int] = mapped_column(ForeignKey("dexs.dex_id"))

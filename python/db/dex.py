@@ -6,6 +6,8 @@ import eth_abi as eth
 import eth_hash.auto as ethash 
 
 from db.models import Tokens, Pools
+from db.utils.logging import get_logger
+logger = get_logger("dex")
 
 ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 TICK_SPACING = {
@@ -115,12 +117,16 @@ class UniswapV2Adapter(DexAdapter):
         for index, data in enumerate(data_encoded):
             success = data[0]
             if not success:
-                raise RuntimeError("Error in multicall")
+                logger.warning(f"Error in multicall for pool {possible_pools[index]}")
+                continue
+
+            if len(data[1]) == 0:
+                continue
 
             pool_data = decode_data(
                     ["getPair"],
                     [data[1]],
-                    [self.factory_contract.abi]
+                    self.factory_contract.abi
             )
             pool_address = Web3.to_checksum_address(pool_data[0][0])
 
@@ -183,12 +189,16 @@ class UniswapV3Adapter(DexAdapter):
         for index, data in enumerate(data_encoded):
             success = data[0]
             if not success:
-                raise RuntimeError("Error in multicall")
+                logger.warning(f"Error in multicall for pool {possible_pools[index]}")
+                continue
+            
+            if len(data[1]) == 0:
+                continue
 
             pool_data = decode_data(
                     ["getPool"],
                     [data[1]],
-                    [self.factory_contract.abi]
+                    self.factory_contract.abi
             )
             pool_address = Web3.to_checksum_address(pool_data[0][0])
 
@@ -266,12 +276,16 @@ class UniswapV4Adapter(DexAdapter):
         for index, data in enumerate(data_encoded):
             success = data[0]
             if not success:
-                raise RuntimeError("Error in multicall")
+                logger.warning(f"Error in multicall for pool {possible_pools[index]}")
+                continue
+
+            if len(data[1]) == 0:
+                continue
 
             pool_data = decode_data(
                     ["getLiquidity"],
                     [data[1]],
-                    [self.factory_contract.abi]
+                    self.factory_contract.abi
             )
             liquidity = pool_data[0][0]
 

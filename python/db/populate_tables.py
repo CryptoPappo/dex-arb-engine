@@ -170,7 +170,11 @@ def populate_pools(
                     chain_id=dex.chain_id,
                     dex_id=dex.dex_id
             )
-            pools = adapter.fetch_pools() 
+            pools = adapter.fetch_pools()
+            
+            if len(pools) == 0:
+                continue
+
             pools_dict = [
                     {
                         "chain_id": pool.chain_id,

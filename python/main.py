@@ -34,6 +34,7 @@ def main():
     rpc_api = require_env("RPC_API")
     web3_by_chain = {}
     tokens_by_chain = {}
+    whitelisted_tokens = ["WETH", "WBTC", "USDC"]
     for chain in CHAINS.values():
         rpc_url = chain.rpc_url + rpc_api
         w3 = Web3(Web3.HTTPProvider(rpc_url))
@@ -47,7 +48,7 @@ def main():
             tokens = session.scalars(
                 select(Tokens)
                 .where(Tokens.chain_id == chain.chain_id)
-                .where(Tokens.symbol in ("WETH", "WBTC", "USDC"))
+                .where(Tokens.symbol.in_(whitelisted_tokens))
             ).all()
             tokens_by_chain[chain.chain_id] = tokens
 
