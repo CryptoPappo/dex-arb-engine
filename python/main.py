@@ -47,6 +47,7 @@ def main():
             tokens = session.scalars(
                 select(Tokens)
                 .where(Tokens.chain_id == chain.chain_id)
+                .where(Tokens.symbol in ("WETH", "WBTC", "USDC"))
             ).all()
             tokens_by_chain[chain.chain_id] = tokens
 
