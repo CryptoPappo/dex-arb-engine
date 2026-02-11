@@ -4,6 +4,7 @@ import sys
 from unittest.mock import MagicMock
 import eth_abi as eth
 import eth_hash.auto as ethash
+from web3 import Web3
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
@@ -16,7 +17,7 @@ ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 
 def make_mock_factory_v2(return_map):
     factory = MagicMock()
-    factory.address = ""
+    factory.address = ZERO_ADDRESS  
     factory.abi = {
             "name": "getPair",
             "outputs": [
@@ -29,7 +30,7 @@ def make_mock_factory_v2(return_map):
     }
 
     def get_pair(token0, token1):
-        pair_address = return_map.get((token0, token1), ZERO_ADDRESS)
+        pair_address = return_map.get((Web3.to_checksum_address(token0), Web3.to_checksum_address(token1)), ZERO_ADDRESS)
         encoded_data = MagicMock()
         encoded_data._encode_transaction_data.return_value = eth.encode(["address"], [pair_address])
 
@@ -41,7 +42,7 @@ def make_mock_factory_v2(return_map):
 
 def make_mock_factory_v3(return_map):
     factory = MagicMock()
-    factory.address = ""
+    factory.address = ZERO_ADDRESS 
     factory.abi = {
             "name": "getPool",
             "outputs": [
@@ -54,7 +55,7 @@ def make_mock_factory_v3(return_map):
     }
 
     def get_pool(token0, token1, fee):
-        pair_address = return_map.get((token0, token1, fee), ZERO_ADDRESS)
+        pair_address = return_map.get((Web3.to_checksum_address(token0), Web3.to_checksum_address(token1), fee), ZERO_ADDRESS)
         encoded_data = MagicMock()
         encoded_data._encode_transaction_data.return_value = eth.encode(["address"], [pair_address])
 
@@ -66,7 +67,7 @@ def make_mock_factory_v3(return_map):
 
 def make_mock_factory_v4(return_map):
     factory = MagicMock()
-    factory.address = ""
+    factory.address = ZERO_ADDRESS 
     factory.abi = {
             "name": "getLiquidity",
             "outputs": [
@@ -104,10 +105,14 @@ def make_mock_multicall():
     return multicall
 
 def test_uniswap_v2_adapter_filters_zero_address():
-    wbtc = Tokens(coin_id=1, chain_id=1, name="", symbol="WBTC", address="0x2260fac5e5542a773aa44fbcfedf7c193bc2c599", decimals=18)
-    weth = Tokens(coin_id=2, chain_id=1, name="", symbol="WETH", address="0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", decimals=18)
-    usdc = Tokens(coin_id=3, chain_id=1, name="", symbol="USDC", address="0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", decimals=18)
-    usdt = Tokens(coin_id=4, chain_id=1, name="", symbol="USDT", address="0xdac17f958d2ee523a2206206994597c13d831ec7", decimals=18)
+    wbtc = Tokens(coin_id=1, chain_id=1, name="", symbol="WBTC", 
+            address=Web3.to_checksum_address("0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"), decimals=18)
+    weth = Tokens(coin_id=2, chain_id=1, name="", symbol="WETH",
+            address=Web3.to_checksum_address("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"), decimals=18)
+    usdc = Tokens(coin_id=3, chain_id=1, name="", symbol="USDC",
+            address=Web3.to_checksum_address("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"), decimals=18)
+    usdt = Tokens(coin_id=4, chain_id=1, name="", symbol="USDT",
+            address=Web3.to_checksum_address("0xdac17f958d2ee523a2206206994597c13d831ec7"), decimals=18)
 
     tokens = [wbtc, weth, usdc, usdt]
     return_map = {
@@ -133,10 +138,14 @@ def test_uniswap_v2_adapter_filters_zero_address():
     assert {pool.pool_address for pool in pools} == {pool for pool in return_map.values()}
 
 def test_uniswap_v3_adapter_filters_zero_address():
-    wbtc = Tokens(coin_id=1, chain_id=1, name="", symbol="WBTC", address="0x2260fac5e5542a773aa44fbcfedf7c193bc2c599", decimals=18)
-    weth = Tokens(coin_id=2, chain_id=1, name="", symbol="WETH", address="0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", decimals=18)
-    usdc = Tokens(coin_id=3, chain_id=1, name="", symbol="USDC", address="0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", decimals=18)
-    usdt = Tokens(coin_id=4, chain_id=1, name="", symbol="USDT", address="0xdac17f958d2ee523a2206206994597c13d831ec7", decimals=18)
+    wbtc = Tokens(coin_id=1, chain_id=1, name="", symbol="WBTC",
+            address=Web3.to_checksum_address("0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"), decimals=18)
+    weth = Tokens(coin_id=2, chain_id=1, name="", symbol="WETH",
+            address=Web3.to_checksum_address("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"), decimals=18)
+    usdc = Tokens(coin_id=3, chain_id=1, name="", symbol="USDC",
+            address=Web3.to_checksum_address("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"), decimals=18)
+    usdt = Tokens(coin_id=4, chain_id=1, name="", symbol="USDT",
+            address=Web3.to_checksum_address("0xdac17f958d2ee523a2206206994597c13d831ec7"), decimals=18)
 
     tokens = [wbtc, weth, usdc, usdt]
     return_map = {
