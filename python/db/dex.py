@@ -89,10 +89,13 @@ class UniswapV2Adapter(DexAdapter):
         for token0, token1, fee in self._pool_combinations():
             calls.append(
                 (
-                    self.factory_contract.address,
+                    Web3.to_checksum_address(self.factory_contract.address),
                     True,
                     self.factory_contract.functions
-                    .getPair(token0.address, token1.address)
+                    .getPair(
+                        Web3.to_checksum_address(token0.address), 
+                        Web3.to_checksum_address(token1.address),
+                    )
                     ._encode_transaction_data(),
                 )
             )
@@ -148,10 +151,14 @@ class UniswapV3Adapter(DexAdapter):
         for token0, token1, fee in self._pool_combinations():
             calls.append(
                 (
-                    self.factory_contract.address,
+                    Web3.to_checksum_address(self.factory_contract.address),
                     True,
                     self.factory_contract.functions
-                    .getPool(token0.address, token1.address, fee)
+                    .getPool(
+                        Web3.to_checksum_address(token0.address), 
+                        Web3.to_checksum_address(token1.address),
+                        fee
+                    )
                     ._encode_transaction_data(),
                 )
             )
@@ -209,13 +216,25 @@ class UniswapV4Adapter(DexAdapter):
             tick_spacing = TICK_SPACING[fee]
             pool_id = "0x" + ethash.keccak(
                     eth.encode(
-                        ["address", "address", "uint24", "int24", "address"],
-                        [token0.address, token1.address, fee, tick_spacing, ZERO_ADDRESS]
+                        [
+                            "address",
+                            "address",
+                            "uint24",
+                            "int24",
+                            "address"
+                        ],
+                        [
+                            Web3.to_checksum_address(token0.address), 
+                            Web3.to_checksum_address(token1.address),
+                            fee,
+                            tick_spacing,
+                            ZERO_ADDRESS
+                        ]
                     )
             ).hex()
             calls.append(
                 (
-                    self.factory_contract.address,
+                    Web3.to_checksum_address(self.factory_contract.address),
                     True,
                     self.factory_contract.functions
                     .getLiquidity(pool_id)
