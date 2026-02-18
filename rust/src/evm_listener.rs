@@ -5,9 +5,16 @@ use alloy::providers::{Provider, ProviderBuilder, WsConnect};
 use alloy::rpc::types::Filter;
 use futures_util::StreamExt;
 
-use crate::topics::{
-    UNISWAP_V2_SYNC_TOPIC,
-    UNISWAP_V3_SWAP_TOPIC,
+use crate::{
+    topics::{
+        UNISWAP_V2_SYNC_TOPIC,
+        UNISWAP_V3_SWAP_TOPIC,
+    },
+    dex::{
+        DexDecoder,
+        UniswapV2Decoder,
+        UniswapV3Decoder,
+    },
 };
 
 sol!(
@@ -24,13 +31,18 @@ pub async fn chain_listener() -> Result<()> {
     rpc_url = rpc_url + &rpc_api;
     let ws = WsConnect::new(rpc_url);
     let provider = ProviderBuilder::new().connect_ws(ws).await?;
+    
+    let decoders: Vec<Box<dyn DexDecoder>> = vec![
+        Box::new(UniswapV2Decoder {dex_id: 1}),
+        Box::new(UniswapV3Decoder {dex_id: 2}),
+    ];
 
     let topics = vec![
         UNISWAP_V2_SYNC_TOPIC,
         UNISWAP_V3_SWAP_TOPIC,
     ];
     let filter = Filter::new()
-        .event_signature(UNISWAP_V2_SYNC_TOPIC);
+        .event_signature(topics);
 
     let sub = provider.subscribe_logs(&filter).await?;
 
@@ -39,9 +51,14 @@ pub async fn chain_listener() -> Result<()> {
     println!("Awaiting logs...");
 
     let handle = tokio::spawn(async move {
-        while let Some(header) = stream.next().await {
-            //let data = Swap::decode_log_data(&header.data());            
-            println!("Latest logs: {:?}", header);
+        while let Some(log) = stream.next().await {
+            for decoder in &decoders {
+                if decoder.is_relevant_log(&log) {
+                    if let Some(event) = decoder.decode_swap(&log, 1) {
+                        println!("Latest logs: {:?}", event);
+                    }
+                }
+            }
         }
     });
 

@@ -1,6 +1,6 @@
 use serde::{Serialize};
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct SwapEvent {
     pub chain_id: u32,
     pub dex_id: u32,
