@@ -25,7 +25,7 @@ pub fn setup_logger() -> Result<()> {
         .chain(std::io::stdout())
         .chain(fern::log_file("pools.log")?)
         .level(LevelFilter::Error)
-        .level_for("rust", LevelFilter::Info)
+        .level_for("rust_listener", LevelFilter::Info)
         .apply()?;
 
     Ok(())

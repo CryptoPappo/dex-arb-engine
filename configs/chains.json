@@ -1,0 +1,23 @@
+[
+	{
+		"chain_id": 1,
+		"name": "Ethereum",
+		"native_token": "ETH",
+		"evm": true,
+		"rpc_url": "${ETHEREUM_RPC_URL}"
+	},
+	{
+		"chain_id": 42161,
+		"name": "Arbitrum",
+		"native_token": "ETH",
+		"evm": true,
+		"rpc_url": "${ARBITRUM_RPC_URL}"
+	},
+	{
+		"chain_id": 56,
+		"name": "BNB Smart Chain",
+		"native_token": "BNB",
+		"evm": true,
+		"rpc_url": "${BSC_RPC_URL}"
+	}
+]

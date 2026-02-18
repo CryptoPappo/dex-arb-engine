@@ -1,4 +1,5 @@
 use eyre::Result;
+use log::info;
 use alloy::sol;
 use alloy::sol_types::SolEvent;
 use alloy::providers::{Provider, ProviderBuilder, WsConnect};
@@ -48,14 +49,14 @@ pub async fn chain_listener() -> Result<()> {
 
     let mut stream = sub.into_stream().take(4);
     
-    println!("Awaiting logs...");
+    info!("Awaiting logs...");
 
     let handle = tokio::spawn(async move {
         while let Some(log) = stream.next().await {
             for decoder in &decoders {
                 if decoder.is_relevant_log(&log) {
                     if let Some(event) = decoder.decode_swap(&log, 1) {
-                        println!("Latest logs: {:?}", event);
+                        info!("Latest logs: {:?}", event);
                     }
                 }
             }
