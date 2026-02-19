@@ -11,14 +11,9 @@ use crate::{
         ChainConfig,
         DexConfig,
     },
-    topics::{
-        UNISWAP_V2_SYNC_TOPIC,
-        UNISWAP_V3_SWAP_TOPIC,
-    },
     dex::{
         DexDecoder,
-        UniswapV2Decoder,
-        UniswapV3Decoder,
+        build_decoders
     },
 };
 
@@ -32,20 +27,18 @@ sol!(
 
 pub async fn chain_listener(
         chain: ChainConfig,
-        dexs: Vec<DexConfig>
+        dexs: &Vec<DexConfig>
 ) -> Result<()> {
     let ws = WsConnect::new(chain.rpc_url);
     let provider = ProviderBuilder::new().connect_ws(ws).await?;
-   
-    let decoders: Vec<Box<dyn DexDecoder>> = vec![
-        Box::new(UniswapV2Decoder {dex_id: 1}),
-        Box::new(UniswapV3Decoder {dex_id: 2}),
-    ];
+  
+    let decoders = build_decoders(dexs); 
 
-    let topics = vec![
-        UNISWAP_V2_SYNC_TOPIC,
-        UNISWAP_V3_SWAP_TOPIC,
-    ];
+    let mut topics = Vec::new();
+    for decoder in &decoders {
+        topics.push(decoder.get_topic());
+    }
+
     let filter = Filter::new()
         .event_signature(topics);
 
@@ -59,7 +52,7 @@ pub async fn chain_listener(
         while let Some(log) = stream.next().await {
             for decoder in &decoders {
                 if decoder.is_relevant_log(&log) {
-                    if let Some(event) = decoder.decode_swap(&log, 1) {
+                    if let Some(event) = decoder.decode_swap(&log, chain.chain_id) {
                         info!("Latest logs: {:?}", event);
                     }
                 }

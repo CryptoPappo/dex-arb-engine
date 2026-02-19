@@ -1,6 +1,6 @@
 use eyre::Result;
 use fern::colors::{Color, ColoredLevelConfig};
-use log::LevelFilter;
+use log::{LevelFilter, info};
 use rust_listener::{
     evm_listener::chain_listener,
     config::{
@@ -43,15 +43,19 @@ pub fn setup_logger() -> Result<()> {
 async fn main() -> Result<()> {
     dotenv::dotenv().ok();
     setup_logger()?;
-    
+   
+    info!("Loading chains...");
     let chains = load_chains()?;
+    
+    info!("Loading dexs...");
     let dexs = load_dexs()?;
     let dexs_by_chain = map_chain_dex(dexs);
 
     let mut handles = vec![];
 
+    info!("Initializing chains listeners");
     for chain in chains {
-        let dex = dexs_by_chain.get(chain.chain_id)?;
+        let dex = dexs_by_chain.get(&chain.chain_id).unwrap();
 
         handles.push(tokio::spawn(async move {
             chain_listener(chain, dex).await

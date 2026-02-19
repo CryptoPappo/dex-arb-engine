@@ -38,7 +38,7 @@ pub fn load_chains() -> Result<Vec<ChainConfig>> {
 
 pub fn load_dexs() -> Result<Vec<DexConfig>> {
     let raw = fs::read_to_string("configs/dexs.json")?;
-    let mut dexs: Vec<DexConfig> = serde_json::from_str(&raw)?;
+    let dexs: Vec<DexConfig> = serde_json::from_str(&raw)?;
 
     Ok(dexs)
 }

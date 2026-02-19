@@ -1,11 +1,15 @@
 use std::marker::Sync as sync;
+use std::sync::Arc;
 use async_trait::async_trait;
+use log::warn;
 use alloy::{
     sol,
     rpc::types::Log,
     sol_types::SolEvent,
+    primitives::B256,
 };
 use crate::{
+    config::DexConfig,
     topics::{
         UNISWAP_V2_SYNC_TOPIC,
         UNISWAP_V3_SWAP_TOPIC
@@ -23,10 +27,42 @@ sol!(
 
 static Q96: f64 = 79228162514264337593543950336.0;
 
+pub fn build_decoders(
+    dexs: &Vec<DexConfig>
+) -> Vec<Arc<dyn DexDecoder + Send + sync>> {
+    let mut decoders: Vec<Arc<dyn DexDecoder + Send + sync>> = Vec::new();
+    for dex in dexs {
+        let decoder = match (dex.name.as_str(), dex.dex_type.as_str()) {
+            ("Uniswap", "V2") => Some(
+                Arc::new(UniswapV2Decoder {dex_id: dex.dex_id})
+                    as Arc<dyn DexDecoder + Send + sync>
+            ),
+            ("Uniswap", "V3") => Some(
+                Arc::new(UniswapV3Decoder {dex_id: dex.dex_id})
+                    as Arc<dyn DexDecoder + Send + sync>
+            ),
+            _ => {
+                warn!(
+                    "Decoder for {} {} not available",
+                    dex.name, dex.dex_type
+                );
+                None
+            }
+        };
+        
+        if let Some(decoder) = decoder {
+            decoders.push(decoder);
+        }
+    }
+    
+    decoders
+}
+
 #[async_trait]
 pub trait DexDecoder: Send + sync {
     fn is_relevant_log(&self, log: &Log) -> bool;
     fn decode_swap(&self, log: &Log, chain_id: u32) -> Option<SwapEvent>;
+    fn get_topic(&self) -> B256;
 }
 
 pub struct UniswapV2Decoder {
@@ -59,6 +95,10 @@ impl DexDecoder for UniswapV2Decoder {
             }
         )
     }
+
+    fn get_topic(&self) -> B256 {
+        UNISWAP_V2_SYNC_TOPIC
+    }
 }
 
 
@@ -88,5 +128,9 @@ impl DexDecoder for UniswapV3Decoder {
                 price: price,
             }
         )
+    }
+
+    fn get_topic(&self) -> B256 {
+        UNISWAP_V3_SWAP_TOPIC
     }
 }
