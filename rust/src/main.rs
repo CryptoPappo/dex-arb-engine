@@ -1,7 +1,15 @@
 use eyre::Result;
 use fern::colors::{Color, ColoredLevelConfig};
 use log::LevelFilter;
-use rust_listener::evm_listener::chain_listener;
+use rust_listener::{
+    evm_listener::chain_listener,
+    config::{
+        load_chains,
+        load_dexs,
+        map_chain_dex
+    },
+};
+
 
 pub fn setup_logger() -> Result<()> {
     let colors = ColoredLevelConfig {
@@ -36,9 +44,23 @@ async fn main() -> Result<()> {
     dotenv::dotenv().ok();
     setup_logger()?;
     
-    chain_listener().await?;
-    //let uniswap_v3_factory = String::from("0x1F98431c8aD98523631AE4a59f267346ea31F984");
-    //pool_finder(411676800, uniswap_v3_factory).await?;
+    let chains = load_chains()?;
+    let dexs = load_dexs()?;
+    let dexs_by_chain = map_chain_dex(dexs);
+
+    let mut handles = vec![];
+
+    for chain in chains {
+        let dex = dexs_by_chain.get(chain.chain_id)?;
+
+        handles.push(tokio::spawn(async move {
+            chain_listener(chain, dex).await
+        }));
+    }
+    
+    for handle in handles {
+        handle.await??;
+    }
 
     Ok(())
 }

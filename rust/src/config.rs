@@ -1,6 +1,7 @@
 use eyre::Result;
 use serde::Deserialize;
 use std::{fs, env};
+use std::collections::HashMap;
 
 #[derive(Deserialize)]
 pub struct ChainConfig {
@@ -40,4 +41,19 @@ pub fn load_dexs() -> Result<Vec<DexConfig>> {
     let mut dexs: Vec<DexConfig> = serde_json::from_str(&raw)?;
 
     Ok(dexs)
+}
+
+pub fn map_chain_dex(
+        dexs: Vec<DexConfig>
+) -> HashMap<u32, Vec<DexConfig>> {
+    let mut dexs_by_chain: HashMap<u32, Vec<DexConfig>> = HashMap::new();
+
+    for dex in dexs {
+        dexs_by_chain
+            .entry(dex.chain_id)
+            .or_insert_with(Vec::new)
+            .push(dex);
+    }
+
+    dexs_by_chain
 }
