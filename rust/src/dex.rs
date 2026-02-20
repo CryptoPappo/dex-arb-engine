@@ -28,7 +28,7 @@ sol!(
 static Q96: f64 = 79228162514264337593543950336.0;
 
 pub fn build_decoders(
-    dexs: &Vec<DexConfig>
+    dexs: &Vec<DexConfig>,
 ) -> Vec<Arc<dyn DexDecoder + Send + sync>> {
     let mut decoders: Vec<Arc<dyn DexDecoder + Send + sync>> = Vec::new();
     for dex in dexs {

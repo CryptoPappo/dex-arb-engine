@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use eyre::Result;
 use fern::colors::{Color, ColoredLevelConfig};
 use log::{LevelFilter, info};
@@ -49,13 +50,15 @@ async fn main() -> Result<()> {
     
     info!("Loading dexs...");
     let dexs = load_dexs()?;
-    let dexs_by_chain = map_chain_dex(dexs);
+    let dexs_by_chain = Arc::new(map_chain_dex(dexs));
 
     let mut handles = vec![];
 
     info!("Initializing chains listeners");
     for chain in chains {
-        let dex = dexs_by_chain.get(&chain.chain_id).unwrap();
+        let dex = Arc::clone(
+            dexs_by_chain.get(&chain.chain_id).unwrap()
+        );
 
         handles.push(tokio::spawn(async move {
             chain_listener(chain, dex).await

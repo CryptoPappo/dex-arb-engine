@@ -1,7 +1,7 @@
+use std::sync::Arc;
 use eyre::Result;
 use log::info;
 use alloy::sol;
-use alloy::sol_types::SolEvent;
 use alloy::providers::{Provider, ProviderBuilder, WsConnect};
 use alloy::rpc::types::Filter;
 use futures_util::StreamExt;
@@ -11,10 +11,7 @@ use crate::{
         ChainConfig,
         DexConfig,
     },
-    dex::{
-        DexDecoder,
-        build_decoders
-    },
+    dex::build_decoders,
 };
 
 sol!(
@@ -27,12 +24,12 @@ sol!(
 
 pub async fn chain_listener(
         chain: ChainConfig,
-        dexs: &Vec<DexConfig>
+        dexs: Arc<Vec<DexConfig>>,
 ) -> Result<()> {
     let ws = WsConnect::new(chain.rpc_url);
     let provider = ProviderBuilder::new().connect_ws(ws).await?;
   
-    let decoders = build_decoders(dexs); 
+    let decoders = build_decoders(&dexs); 
 
     let mut topics = Vec::new();
     for decoder in &decoders {
