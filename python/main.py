@@ -5,7 +5,7 @@ from db.utils.logging import get_logger
 from db.utils.tools import require_env
 from db.connection import create_connection
 from db.models import Base, Tokens
-from db.config import CHAINS, DEXS
+from db.config import load_chains, load_dexs
 from db.populate_tables import (
         populate_chains,
         populate_dexs,
@@ -16,6 +16,9 @@ logger = get_logger("main")
 
 def main():
     logger.info("Starting dex-arb-engine bootstrap")
+    
+    chains = load_chains()
+    dexs = load_dexs()
 
     engine, Session = create_connection("DATABASE_URL")
 
@@ -23,19 +26,19 @@ def main():
     Base.metadata.create_all(engine)
 
     logger.info("Populating chains")
-    populate_chains(Session, CHAINS.values())
+    populate_chains(Session, chains)
 
     logger.info("Populating DEXs")
-    populate_dexs(Session, DEXS.values())
+    populate_dexs(Session, dexs)
 
     logger.info("Populating tokens")
-    populate_tokens(Session, CHAINS.values())
+    populate_tokens(Session, chains)
 
     rpc_api = require_env("RPC_API")
     web3_by_chain = {}
     tokens_by_chain = {}
     whitelisted_tokens = ["WETH", "WBTC", "USDC"]
-    for chain in CHAINS.values():
+    for chain in chains:
         rpc_url = chain.rpc_url + rpc_api
         w3 = Web3(Web3.HTTPProvider(rpc_url))
 
@@ -55,8 +58,8 @@ def main():
     logger.info("Populating pools")
     populate_pools(
             Session,
-            CHAINS.values(),
-            DEXS.values(),
+            chains,
+            dexs,
             tokens_by_chain,
             web3_by_chain,
     )

@@ -18,16 +18,18 @@ ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 def make_mock_factory_v2(return_map):
     factory = MagicMock()
     factory.address = ZERO_ADDRESS  
-    factory.abi = {
-            "name": "getPair",
-            "outputs": [
-                {
-                    "internalType":"address",
-                    "name":"",
-                    "type":"address"
-                 }
-            ]
-    }
+    factory.abi = [
+            {
+                "name": "getPair",
+                "outputs": [
+                    {
+                        "internalType":"address",
+                        "name":"",
+                        "type":"address"
+                     }
+                ]
+            }
+    ]
 
     def get_pair(token0, token1):
         pair_address = return_map.get((Web3.to_checksum_address(token0), Web3.to_checksum_address(token1)), ZERO_ADDRESS)
@@ -43,16 +45,18 @@ def make_mock_factory_v2(return_map):
 def make_mock_factory_v3(return_map):
     factory = MagicMock()
     factory.address = ZERO_ADDRESS 
-    factory.abi = {
-            "name": "getPool",
-            "outputs": [
-                {
-                    "internalType":"address",
-                    "name":"",
-                    "type":"address"
-                 }
-            ]
-    }
+    factory.abi = [
+            {
+                "name": "getPool",
+                "outputs": [
+                    {
+                        "internalType":"address",
+                        "name":"",
+                        "type":"address"
+                     }
+                ]
+            }
+    ]
 
     def get_pool(token0, token1, fee):
         pair_address = return_map.get((Web3.to_checksum_address(token0), Web3.to_checksum_address(token1), fee), ZERO_ADDRESS)
@@ -68,16 +72,18 @@ def make_mock_factory_v3(return_map):
 def make_mock_factory_v4(return_map):
     factory = MagicMock()
     factory.address = ZERO_ADDRESS 
-    factory.abi = {
-            "name": "getLiquidity",
-            "outputs": [
-                {
-                    "internalType":"uint128",
-                    "name":"liquidity",
-                    "type":"uint128"
-                 }
-            ]
-    }
+    factory.abi = [
+            {
+                "name": "getLiquidity",
+                "outputs": [
+                    {
+                        "internalType":"uint128",
+                        "name":"liquidity",
+                        "type":"uint128"
+                     }
+                ]
+            }
+    ]
 
     def get_liquidity(pool_id):
         liquidity = return_map.get(pool_id, 0)

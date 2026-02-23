@@ -1,4 +1,7 @@
 from dataclasses import dataclass
+from pathlib import Path
+import json
+import os
 
 @dataclass(frozen=True)
 class ChainConfig:
@@ -17,103 +20,44 @@ class DexConfig:
     factory_address: str
     quoter_address: str | None = None
 
-CHAINS = {
-        1: ChainConfig(
-            chain_id=1,
-            name="Ethereum",
-            native_token="ETH",
-            evm=True,
-            rpc_url="https://eth-mainnet.g.alchemy.com/v2/",
-        ),
-        42161: ChainConfig(
-            chain_id=42161,
-            name="Arbitrum",
-            native_token="ETH",
-            evm=True,
-            rpc_url="https://arb-mainnet.g.alchemy.com/v2/",
-        ),
-        56: ChainConfig(
-            chain_id=56,
-            name="BNB Smart Chain",
-            native_token="BNB",
-            evm=True,
-            rpc_url="https://bnb-mainnet.g.alchemy.com/v2/",
-        ),
-}
-
-DEXS = {
-        1: DexConfig(
-            dex_id=1,
-            chain_id=1,
-            name="Uniswap",
-            dex_type="V2",
-            factory_address="0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
-            quoter_address="0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
-        ),
-        2: DexConfig(
-            dex_id=2,
-            chain_id=42161,
-            name="Uniswap",
-            dex_type="V2",
-            factory_address="0xf1D7CC64Fb4452F05c498126312eBE29f30Fbcf9",
-            quoter_address="0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24",
-        ),
-        3: DexConfig(
-            dex_id=3,
-            chain_id=56,
-            name="Uniswap",
-            dex_type="V2",
-            factory_address="0x8909Dc15e40173Ff4699343b6eB8132c65e18eC6",
-            quoter_address="0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24",
-        ),
-        4: DexConfig(
-            dex_id=4,
-            chain_id=1,
-            name="Uniswap",
-            dex_type="V3",
-            factory_address="0x1F98431c8aD98523631AE4a59f267346ea31F984",
-            quoter_address="0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
-        ),
-        5: DexConfig(
-            dex_id=5,
-            chain_id=42161,
-            name="Uniswap",
-            dex_type="V3",
-            factory_address="0x1F98431c8aD98523631AE4a59f267346ea31F984",
-            quoter_address="0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
-        ),
-        6: DexConfig(
-            dex_id=6,
-            chain_id=56,
-            name="Uniswap",
-            dex_type="V3",
-            factory_address="0xdB1d10011AD0Ff90774D0C6Bb92e5C5c8b4461F7",
-            quoter_address="0x78D78E420Da98ad378D7799bE8f4AF69033EB077",
-        ),
-        7: DexConfig(
-            dex_id=7,
-            chain_id=1,
-            name="Uniswap",
-            dex_type="V4",
-            factory_address="0x7ffe42c4a5deea5b0fec41c94c136cf115597227",
-            quoter_address="0x52f0e24d1c21c8a0cb1e5a5dd6198556bd9e1203",
-        ),
-        8: DexConfig(
-            dex_id=8,
-            chain_id=42161,
-            name="Uniswap",
-            dex_type="V4",
-            factory_address="0x76fd297e2d437cd7f76d50f01afe6160f86e9990",
-            quoter_address="0x3972c00f7ed4885e145823eb7c655375d275a1c5",
-        ),
-        9: DexConfig(
-            dex_id=9,
-            chain_id=56,
-            name="Uniswap",
-            dex_type="V4",
-            factory_address="0xd13dd3d6e93f276fafc9db9e6bb47c1180aee0c4",
-            quoter_address="0x9f75dd27d6664c475b90e105573e550ff69437b0",
-        ),
-}
-
 MULTICALL_ADDRESS = "0xcA11bde05977b3631167028862bE2a173976CA11"
+CONFIG_DIR = Path(__file__).resolve().parents[2] / "configs"
+
+def load_chains() -> list[ChainConfig]:
+    with open(CONFIG_DIR / "chains.json") as f:
+        data = json.load(f) 
+
+    chains = []
+    for chain in data:
+        rpc_url = os.environ[chain["rpc_url"].strip("${}")]
+        chains.append(
+                ChainConfig(
+                    chain_id=chain["chain_id"],
+                    name=chain["name"],
+                    native_token=chain["native_token"],
+                    evm=chain["evm"],
+                    rpc_url=rpc_url,
+                )
+        )
+    
+    return chains
+
+def load_dexs() -> list[DexConfig]:
+    with open(CONFIG_DIR / "dexs.json") as f:
+        data = json.load(f) 
+
+    dexs = []
+    for dex in data:
+        rpc_url = os.environ[dex["rpc_url"].strip("${}")]
+        dexs.append(
+                DexConfig(
+                    dex_id=dex["dex_id"],
+                    chain_id=dex["chain_id"],
+                    name=dex["name"],
+                    dex_type=dex["dex_type"],
+                    factory_address=dex["factory_address"],
+                    quoter_address=dex["quoter_address"],
+                )
+        )
+
+    return dexs
