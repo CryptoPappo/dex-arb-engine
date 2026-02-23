@@ -5,6 +5,7 @@ use alloy::sol;
 use alloy::providers::{Provider, ProviderBuilder, WsConnect};
 use alloy::rpc::types::Filter;
 use futures_util::StreamExt;
+use rdkafka::producer::FutureProducer; 
 
 use crate::{
     config::{
@@ -12,6 +13,7 @@ use crate::{
         DexConfig,
     },
     dex::build_decoders,
+    kafka::send_swap,
 };
 
 sol!(
@@ -25,6 +27,7 @@ sol!(
 pub async fn chain_listener(
         chain: ChainConfig,
         dexs: Arc<Vec<DexConfig>>,
+        producer: FutureProducer,
 ) -> Result<()> {
     let ws = WsConnect::new(chain.rpc_url);
     let provider = ProviderBuilder::new().connect_ws(ws).await?;
@@ -50,7 +53,7 @@ pub async fn chain_listener(
             for decoder in &decoders {
                 if decoder.is_relevant_log(&log) {
                     if let Some(event) = decoder.decode_swap(&log, chain.chain_id) {
-                        info!("Latest logs: {:?}", event);
+                        send_swap(&producer, &event).await; 
                     }
                 }
             }

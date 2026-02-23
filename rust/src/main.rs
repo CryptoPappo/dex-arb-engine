@@ -9,6 +9,7 @@ use rust_listener::{
         load_dexs,
         map_chain_dex
     },
+    kafka::create_producer,
 };
 
 
@@ -54,14 +55,18 @@ async fn main() -> Result<()> {
 
     let mut handles = vec![];
 
+    let producer = create_producer();
+
     info!("Initializing chains listeners");
     for chain in chains {
+        let producer = producer.clone();
+
         let dex = Arc::clone(
             dexs_by_chain.get(&chain.chain_id).unwrap()
         );
 
         handles.push(tokio::spawn(async move {
-            chain_listener(chain, dex).await
+            chain_listener(chain, dex, producer).await
         }));
     }
     
