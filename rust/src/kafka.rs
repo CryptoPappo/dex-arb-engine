@@ -16,7 +16,7 @@ pub fn create_producer() -> FutureProducer {
 pub async fn send_swap(
     producer: &FutureProducer,
     event: &SwapEvent,
-) {
+) -> Result<()> {
     let payload = serde_json::to_vec(event)?;
 
     let produce_future = producer.send(
@@ -29,4 +29,6 @@ pub async fn send_swap(
         Ok(delivery) => info!("Sent: {:?}", delivery),
         Err((e, _)) => error!("Kafka send failed: {:?}", e),
     }
+
+    Ok(())
 }

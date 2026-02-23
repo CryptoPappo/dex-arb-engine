@@ -53,7 +53,7 @@ pub async fn chain_listener(
             for decoder in &decoders {
                 if decoder.is_relevant_log(&log) {
                     if let Some(event) = decoder.decode_swap(&log, chain.chain_id) {
-                        send_swap(&producer, &event).await; 
+                        let _ = send_swap(&producer, &event).await; 
                     }
                 }
             }
