@@ -16,7 +16,7 @@ pub fn create_producer() -> FutureProducer {
 pub async fn send_swap(
     producer: &FutureProducer,
     event: &SwapEvent,
-) -> {
+) {
     let payload = serde_json::to_vec(event)?;
 
     let produce_future = producer.send(
