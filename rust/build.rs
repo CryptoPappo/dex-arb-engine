@@ -1,9 +1,8 @@
-use eyre::Result;
 
-fn main() -> Result<()> {
+fn main() {
     prost_build::compile_protos(
         &["../schemas/swap_event.proto"],
         &["../schemas"],
-    )?;
-    Ok(())
+    )
+    .expect("Failed to compile protobufs");
 }
