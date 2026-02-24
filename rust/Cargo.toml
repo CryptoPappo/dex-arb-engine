@@ -17,6 +17,7 @@ async-trait = "0.1.89"
 rdkafka = { version = "0.36", features = ["cmake-build", "tokio"] }
 prost = "0.14.3"
 prost-types = "0.14.3"
+protoc-prebuilt = "0.3.0"
 
 # logging
 log = "0.4"
