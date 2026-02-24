@@ -2,8 +2,9 @@ use eyre::Result;
 use log::{info, error};
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::config::ClientConfig;
+use prost::Message;
 
-use crate::events::SwapEvent;
+use crate::proto::SwapEvent;
 
 pub fn create_producer() -> FutureProducer {
     ClientConfig::new()
@@ -17,11 +18,13 @@ pub async fn send_swap(
     producer: &FutureProducer,
     event: &SwapEvent,
 ) -> Result<()> {
-    let payload = serde_json::to_vec(event)?;
+    let pool_address = event.pool_address.as_str(); 
+    let mut payload = Vec::with_capacity(event.encoded_len());
+    event.encode(&mut payload)?;
 
     let produce_future = producer.send(
         FutureRecord::to("dex.swaps.raw")
-            .key(event.pool_address.as_str())
+            .key(pool_address)
             .payload(&payload),
         std::time::Duration::from_secs(0),
     );

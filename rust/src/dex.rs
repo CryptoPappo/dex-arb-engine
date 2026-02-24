@@ -14,7 +14,7 @@ use crate::{
         UNISWAP_V2_SYNC_TOPIC,
         UNISWAP_V3_SWAP_TOPIC
     },
-    events::SwapEvent,
+    proto::SwapEvent,
 };
 
 sol!(
@@ -87,11 +87,11 @@ impl DexDecoder for UniswapV2Decoder {
                 chain_id: chain_id,
                 dex_id: self.dex_id,
                 pool_address: log.inner.address.to_string(),
+                price: price.to_string(),
+                liquidity: liquidity.to_string(),
                 block_number: log.block_number.unwrap(),
                 tx_hash: log.transaction_hash.unwrap().to_string(),
                 timestamp: log.block_timestamp.unwrap(),
-                liquidity: liquidity,
-                price: price,
             }
         )
     }
@@ -121,11 +121,11 @@ impl DexDecoder for UniswapV3Decoder {
                 chain_id: chain_id,
                 dex_id: self.dex_id,
                 pool_address: log.inner.address.to_string(),
+                price: price.to_string(),
+                liquidity: liquidity.to_string(),
                 block_number: log.block_number.unwrap(),
                 tx_hash: log.transaction_hash.unwrap().to_string(),
                 timestamp: log.block_timestamp.unwrap(),
-                liquidity: data.liquidity,
-                price: price,
             }
         )
     }
