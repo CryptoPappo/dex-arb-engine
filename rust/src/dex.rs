@@ -122,7 +122,7 @@ impl DexDecoder for UniswapV3Decoder {
                 dex_id: self.dex_id,
                 pool_address: log.inner.address.to_string(),
                 price: price.to_string(),
-                liquidity: liquidity.to_string(),
+                liquidity: data.liquidity.to_string(),
                 block_number: log.block_number.unwrap(),
                 tx_hash: log.transaction_hash.unwrap().to_string(),
                 timestamp: log.block_timestamp.unwrap(),
