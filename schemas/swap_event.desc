@@ -1,0 +1,12 @@
+
+“
+swap_event.protodexarb"î
+	SwapEvent
+chain_id (RchainId
+dex_id (RdexId!
+pool_address (	RpoolAddress
+price (	Rprice
+	liquidity (	R	liquidity!
+block_number (RblockNumber
+tx_hash (	RtxHash
+	timestamp (R	timestampbproto3
